@@ -137,7 +137,6 @@ class MCPClient:
             
             if not servers:
                 print("❌ No MCP servers configured")
-                await self.disconnect()
                 return False
             
             for server_name, server_info in servers.items():
@@ -145,7 +144,6 @@ class MCPClient:
             
             if not self.tools:
                 print("❌ No tools loaded from servers")
-                await self.disconnect()
                 return False
             
             # Initialize agent
@@ -157,7 +155,6 @@ class MCPClient:
             
         except Exception as e:
             print(f"❌ Connection failed: {e}")
-            await self.disconnect()
             return False
     
     async def _connect_to_server(self, server_name: str, server_info: Dict) -> None:
@@ -249,45 +246,17 @@ Please process this request intelligently, using appropriate tools and providing
         return str(response)
     
     async def disconnect(self) -> str:
-        """Properly disconnect all MCP sessions and cleanup resources."""
+        """Disconnect from servers."""
         if self.exit_stack:
             try:
-                # Close all sessions first
-                for session_name, session in self.sessions.items():
-                    try:
-                        debug_print(f"Closing session: {session_name}")
-                        # Don't await session close as it might be already closed
-                    except Exception as e:
-                        debug_print(f"Warning: Error closing session {session_name}: {e}")
-                
-                # Clear sessions before closing exit stack
+                await self.exit_stack.aclose()
                 self.sessions.clear()
-                
-                # Use aclose instead of manual __aexit__
-                # Wrap in try/except to suppress anyio cancel scope errors
-                try:
-                    await self.exit_stack.aclose()
-                    debug_print("✅ Exit stack closed successfully")
-                except Exception as e:
-                    # Suppress anyio cancel scope errors - they're harmless during cleanup
-                    error_str = str(e)
-                    if "cancel scope" in error_str.lower():
-                        debug_print(f"ℹ️ Suppressed expected cleanup error: {type(e).__name__}")
-                    else:
-                        debug_print(f"Warning: Error closing exit stack: {e}")
-                
-            except Exception as e:
-                debug_print(f"Warning: Error during disconnect: {e}")
-                # Continue with cleanup even if there are errors
-            finally:
-                # Reset all state regardless of errors
-                self.exit_stack = None
-                self.client = None
-                self.tools = []
-                self.sessions = {}
                 self.agent = None
-                
-            return "✅ Disconnected"
+                self.tools = []
+                return "✅ Disconnected"
+            except Exception as e:
+                debug_print(f"Warning during disconnect: {e}")
+                return f"⚠️ Disconnect completed with warnings"
         return "ℹ️ Not connected"
     
     async def __aenter__(self):
@@ -299,30 +268,6 @@ Please process this request intelligently, using appropriate tools and providing
         """Async context manager exit."""
         await self.disconnect()
         return False
-    
-    @staticmethod
-    async def create_and_run_query(query_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Static method for backward compatibility - creates client and runs query."""
-        try:
-            query = query_data.get('query')
-            user_id = query_data.get('user_id', 1)
-            llm_provider = query_data.get('llm_provider', 'google')
-            llm_model = query_data.get('llm_model', 'gemini-2.0-flash')
-            
-            if not query:
-                return {
-                    "success": False,
-                    "error": "Missing query",
-                    "message": "Query parameter is required"
-                }
-            
-            return await run_query(query, user_id, llm_provider, llm_model)
-        except Exception as e:
-            return {
-                "success": False,
-                "error": str(e),
-                "message": f"Failed to process query: {str(e)}"
-            }
 
 
 async def run_query(
@@ -337,6 +282,3 @@ async def run_query(
         llm_model=llm_model
     ) as client:
         return await client.process_query(query, user_id=user_id)
-
-# Backward compatibility alias
-ExpenseMCPClient = MCPClient
