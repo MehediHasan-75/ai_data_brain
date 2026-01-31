@@ -50,7 +50,7 @@ CSRF_TRUSTED_ORIGINS = [
     "http://localhost:3000",
 ]
 
-ROOT_URLCONF = 'expense_api.urls'  # <-- update to your actual project folder name
+ROOT_URLCONF = 'expense_api.urls'
 
 TEMPLATES = [
     {

@@ -1,0 +1,115 @@
+{
+  "info": {
+    "name": "AI Data Brain API",
+    "description": "Postman collection for testing AI Data Brain backend API with correct field names",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"username\":\"testuser\",\"email\":\"test@example.com\",\"password\":\"password123\",\"password_confirm\":\"password123\"}"},
+            "url": {"raw": "http://localhost:8000/auth/register/", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["auth", "register", ""]}
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {"mode": "raw", "raw": "{\"username\":\"testuser\",\"password\":\"password123\"}"},
+            "url": {"raw": "http://localhost:8000/auth/login/", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["auth", "login", ""]}
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tables Management",
+      "item": [
+        {
+          "name": "Create Table",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer <access_token>"}],
+            "body": {"mode": "raw", "raw": "{\"table_name\":\"Expenses\",\"headers\":[\"Date\",\"Category\",\"Amount\",\"Description\"]}"},
+            "url": {"raw": "http://localhost:8000/main/create-tableContent/", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["main", "create-tableContent", ""]}
+          }
+        },
+        {
+          "name": "List Tables",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {"raw": "http://localhost:8000/main/tables/", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["main", "tables", ""]}
+          }
+        },
+        {
+          "name": "Get Table Content",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {"raw": "http://localhost:8000/main/table-contents/?table_id=1", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["main", "table-contents", ""], "query": [{"key": "table_id", "value": "1"}]}
+          }
+        },
+        {
+          "name": "Add Row",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer <access_token>"}],
+            "body": {"mode": "raw", "raw": "{\"tableId\":1,\"row\":{\"Date\":\"2024-01-31\",\"Category\":\"Food\",\"Amount\":\"50.00\",\"Description\":\"Lunch\"}}"},
+            "url": {"raw": "http://localhost:8000/main/add-row/", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["main", "add-row", ""]}
+          }
+        },
+        {
+          "name": "Update Row",
+          "request": {
+            "method": "PATCH",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer <access_token>"}],
+            "body": {"mode": "raw", "raw": "{\"tableId\":1,\"rowId\":1,\"newRowData\":{\"Date\":\"2024-01-31\",\"Category\":\"Food Updated\",\"Amount\":\"60.00\",\"Description\":\"Lunch Updated\"}}"},
+            "url": {"raw": "http://localhost:8000/main/update-row/", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["main", "update-row", ""]}
+          }
+        },
+        {
+          "name": "Delete Row",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer <access_token>"}],
+            "body": {"mode": "raw", "raw": "{\"tableId\":1,\"rowId\":1}"},
+            "url": {"raw": "http://localhost:8000/main/delete-row/", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["main", "delete-row", ""]}
+          }
+        },
+        {
+          "name": "Add Column",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer <access_token>"}],
+            "body": {"mode": "raw", "raw": "{\"tableId\":1,\"header\":\"Status\"}"},
+            "url": {"raw": "http://localhost:8000/main/add-column/", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["main", "add-column", ""]}
+          }
+        },
+        {
+          "name": "Delete Column",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}, {"key": "Authorization", "value": "Bearer <access_token>"}],
+            "body": {"mode": "raw", "raw": "{\"tableId\":1,\"header\":\"Status\"}"},
+            "url": {"raw": "http://localhost:8000/main/delete-column/", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["main", "delete-column", ""]}
+          }
+        },
+        {
+          "name": "Delete Table",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {"raw": "http://localhost:8000/main/tables/1/", "protocol": "http", "host": ["localhost"], "port": "8000", "path": ["main", "tables", "1", ""]}
+          }
+        }
+      ]
+    }
+  ]
+}
