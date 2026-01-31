@@ -315,7 +315,7 @@ Share with team:
 ✅ Rahim receives access instantly
 ```
 
-## Testing and Quality Assurance
+<!-- ## Testing and Quality Assurance
 
 Run tests with:
 
@@ -347,7 +347,7 @@ The test suite covers:
 - **AI response**: 2-5s for complex multi-step operations
 - **Real-time broadcast**: <100ms WebSocket latency
 - **Scalability**: Supports 1M+ rows without degradation
-- **Concurrent users**: Tested up to 500 simultaneous connections
+- **Concurrent users**: Tested up to 500 simultaneous connections -->
 
 ## License
 
