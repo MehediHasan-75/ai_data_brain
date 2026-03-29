@@ -290,8 +290,8 @@ class MCPClient:
         try:
             query = query_data.get('query')
             user_id = query_data.get('user_id', 1)
-            llm_provider = query_data.get('llm_provider', 'google')
-            llm_model = query_data.get('llm_model', 'gemini-2.0-flash')
+            llm_provider = query_data.get("llm_provider", "anthropic")
+            llm_model = query_data.get("llm_model", "claude-sonnet-4-6")
             
             if not query:
                 return {
@@ -312,15 +312,13 @@ class MCPClient:
 async def run_query(
     query: str,
     user_id: int = 1,
-    llm_provider: str = 'google',
-    llm_model: str = 'gemini-2.0-flash'
+    llm_provider: str = "anthropic",
+    llm_model: str = "claude-sonnet-4-6",
 ) -> Dict[str, Any]:
-    """Run a single query and return results."""
-    async with MCPClient(
-        llm_provider=llm_provider,
-        llm_model=llm_model
-    ) as client:
-        return await client.process_query(query, user_id=user_id)
+    """Run a query using the in-process agent (no subprocess overhead)."""
+    from .in_process_client import run_query as _run
+    return await _run(query, user_id, llm_provider, llm_model)
+
 
 # Backward compatibility alias
 ExpenseMCPClient = MCPClient
