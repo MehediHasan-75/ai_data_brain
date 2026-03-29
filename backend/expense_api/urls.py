@@ -23,6 +23,6 @@ urlpatterns = [
     path('', views.home, name='home'),
     path('about/', views.about, name='about'),
     path('auth/', include('expense_api.apps.user_auth.urls')),
-    path('agent/', include('expense_api.apps.agent.urls_new')),  
+    path('agent/', include('expense_api.apps.agent.urls')),
     path('main/', include('expense_api.apps.FinanceManagement.urls')),
 ]

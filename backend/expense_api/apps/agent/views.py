@@ -19,6 +19,7 @@ from .serializers import (
 )
 from .models import ChatSession, ChatMessage
 from .client.in_process_client import run_query, stream_query
+from .prompts import REGISTRY as PROMPT_REGISTRY
 
 
 def _clean_response(response_obj: dict) -> dict:
@@ -214,3 +215,47 @@ class SaveSessionMessageView(APIView):
             {"message": "Message saved successfully.", "data": serializer.data},
             status=status.HTTP_201_CREATED,
         )
+
+
+# ── Prompt template views ─────────────────────────────────────────────────────
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PromptListView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticatedCustom]
+
+    async def get(self, request):
+        """Return all available prompt templates."""
+        return Response(
+            {"prompts": [t.to_dict() for t in PROMPT_REGISTRY.values()]},
+            status=status.HTTP_200_OK,
+        )
+
+
+@method_decorator(csrf_exempt, name="dispatch")
+class PromptInvokeView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticatedCustom]
+
+    async def post(self, request, prompt_name):
+        """
+        Invoke a named prompt template.
+
+        Optional body parameters are forwarded to the template as keyword
+        arguments (e.g. {"period": "last month"}).
+        """
+        template = PROMPT_REGISTRY.get(prompt_name)
+        if template is None:
+            return Response(
+                {"error": f"Prompt '{prompt_name}' not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        params = {k: v for k, v in request.data.items() if k != "query"}
+        query = template.render(**params)
+
+        llm_provider = request.data.get("llm_provider", "anthropic")
+        llm_model = request.data.get("llm_model", "claude-sonnet-4-6")
+
+        result = await run_query(query, request.user.id, llm_provider, llm_model)
+        return Response(_clean_response(result), status=status.HTTP_200_OK)
