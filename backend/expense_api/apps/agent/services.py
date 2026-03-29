@@ -11,7 +11,7 @@ from django.core.exceptions import ValidationError
 from django.db import transaction
 
 from .models import ChatSession, ChatMessage
-from .client.client import ExpenseMCPClient
+from .client import ExpenseMCPClient
 from .exceptions import (
     ChatSessionNotFound,
     ChatMessageNotFound,

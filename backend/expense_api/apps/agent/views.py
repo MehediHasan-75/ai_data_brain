@@ -18,7 +18,7 @@ from .serializers import (
     ChatMessageSerializer,
 )
 from .models import ChatSession, ChatMessage
-from .client.in_process_client import run_query, stream_query
+from .client import run_query, stream_query
 from .prompts import REGISTRY as PROMPT_REGISTRY
 
 
