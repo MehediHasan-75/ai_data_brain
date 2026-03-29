@@ -11,6 +11,4 @@ __pycache__/
 # Logs
 *.log
 
-prompt.md
-read_finbot_dir.py
-directory_structure.txt
+*QUESTIONS*.md

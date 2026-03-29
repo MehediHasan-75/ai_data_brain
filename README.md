@@ -77,30 +77,138 @@ Django Channels extends Django's ASGI handling to support WebSocket connections.
 
 This enables collaborative editing where multiple users see changes immediately without polling.
 
-### Separation of Concerns (SoC)
+## Backend Architecture and Code Organization
 
-The backend implements strict separation:
+### Project Structure
 
-**Models Layer** (`models.py`): Three core models encapsulate data structure
-- DynamicTableData: Metadata and ownership
-- JsonTable: Column definitions
-- JsonTableRow: Actual data rows
+The backend follows Django best practices with modular app-based architecture:
 
-**Serializers Layer** (`serializers.py`): Converts models to API responses
-- QuerySerializer: Validates incoming natural language queries
-- ChatSessionSerializer: Manages conversation history
-- ChatMessageSerializer: Formats AI responses
+```
+backend/
+├── expense_api/
+│   ├── settings/
+│   │   ├── base.py           # Shared configuration
+│   │   ├── development.py    # Development overrides
+│   │   ├── production.py     # Production overrides
+│   │   └── testing.py        # Testing overrides
+│   ├── apps/
+│   │   ├── user_auth/        # Authentication module
+│   │   │   ├── models.py
+│   │   │   ├── views.py
+│   │   │   ├── serializers.py
+│   │   │   ├── authentication.py
+│   │   │   └── permission.py
+│   │   ├── FinanceManagement/ # Table & data management
+│   │   │   ├── models.py
+│   │   │   ├── views.py
+│   │   │   └── serializers.py
+│   │   └── agent/             # AI agent & chat
+│   │       ├── models.py
+│   │       ├── views.py
+│   │       ├── serializers.py
+│   │       ├── client/
+│   │       │   └── client.py  # MCP integration
+│   │       └── urls.py
+│   ├── urls.py
+│   ├── asgi.py
+│   └── wsgi.py
+└── manage.py
+```
 
-**Views Layer** (`views.py`): Handles HTTP requests
-- AgentAPIView: Processes natural language queries
-- TableViews: CRUD for tables and rows
-- AuthViews: JWT authentication
+### Layered Architecture (Separation of Concerns)
 
-**Client Layer** (`client/client.py`): MCP communication
-- ExpenseMCPClient: Session management
-- Tool wrapping for Claude access
+The backend implements a four-layer architecture ensuring each layer has single responsibility:
 
-This separation allows modifications to any layer without affecting others. For instance, adding a new database tool only requires updating the client, not the views or serializers.
+**Layer 1: Models** (`models.py`)
+- Defines data structure and relationships
+- Three core models: DynamicTableData, JsonTable, JsonTableRow
+- Encapsulates all database schema logic
+- No business logic or HTTP handling
+
+**Layer 2: Serializers** (`serializers.py`)
+- Validates incoming request data
+- Transforms model instances to JSON responses
+- Ensures data consistency across API boundaries
+- Example: QuerySerializer validates natural language input before processing
+
+**Layer 3: Views** (`views.py`)
+- Handles HTTP requests and responses
+- Implements authentication checks and permission validation
+- Orchestrates business logic by calling models and serializers
+- Each view focuses on single resource (Users, Tables, Agents)
+
+**Layer 4: Client** (`client/`)
+- Manages external integrations (Model Context Protocol, Claude API)
+- Isolates third-party dependencies from core application logic
+- Maintains session state for AI interactions
+- Handles async operations and tool management
+
+### App-Based Modular Design
+
+The project organizes functionality into independent Django apps, each with clear boundaries:
+
+**user_auth App**
+- Responsibility: User authentication and authorization
+- Exports: Login, registration, token refresh, user profile endpoints
+- Dependencies: Django User model, JWT utilities
+- Isolation: Contains all auth-related logic and doesn't depend on other apps
+
+**FinanceManagement App**
+- Responsibility: Dynamic table CRUD operations
+- Exports: Table creation, row management, column modification, sharing
+- Dependencies: User model (for ownership), DRF
+- Isolation: Pure data management without AI logic
+
+**agent App**
+- Responsibility: Natural language processing and chat
+- Exports: Query processing, chat sessions, conversation history
+- Dependencies: LangGraph, Anthropic SDK, MCP client
+- Isolation: AI logic isolated from table operations
+
+### Data Flow Pattern
+
+Each request follows a consistent flow through layers:
+
+```
+HTTP Request
+    ↓
+Middleware (Authentication, CORS)
+    ↓
+View (URL routing)
+    ↓
+Authentication Check
+    ↓
+Serializer.is_valid() (Input validation)
+    ↓
+Business Logic (Model operations)
+    ↓
+Serializer (Output transformation)
+    ↓
+HTTP Response
+```
+
+Example: Creating a table
+```python
+# Frontend sends POST to /main/create-tableContent/
+# ↓ CreateTableWithHeadersView.post() processes request
+# ├─ Permission check (IsAuthenticatedCustom)
+# ├─ Validate input (serializer.is_valid())
+# ├─ Create DynamicTableData model
+# ├─ Create JsonTable model
+# ├─ Return response (serializer.data)
+# ↓ Frontend receives table with generated ID
+```
+
+### Environment-Based Configuration
+
+Django settings are split by environment to support different deployments:
+
+- **base.py**: Common settings shared across all environments (INSTALLED_APPS, MIDDLEWARE, REST_FRAMEWORK config)
+- **development.py**: Overrides for local development (DEBUG=True, SQLite database, verbose logging)
+- **production.py**: Overrides for production (DEBUG=False, PostgreSQL database, security hardening)
+- **testing.py**: Optimized settings for test suite execution
+
+Configuration loaded via `.env` file specifying `DJANGO_SETTINGS_MODULE`, enabling seamless environment switching without code changes.
 
 ### Authentication & Permission Model
 

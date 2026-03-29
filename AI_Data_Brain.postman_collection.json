@@ -1,0 +1,585 @@
+{
+  "info": {
+    "name": "AI Data Brain API - Complete",
+    "description": "Postman collection for testing AI Data Brain backend API with all endpoints",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"testuser\",\"email\":\"test@example.com\",\"password\":\"password123\",\"password_confirm\":\"password123\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/auth/register/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["auth", "register", ""]
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"username\":\"testuser\",\"password\":\"password123\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/auth/login/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["auth", "login", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Current User (Me)",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/auth/me/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["auth", "me", ""]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/auth/logout/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["auth", "logout", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agent API",
+      "item": [
+        {
+          "name": "Query Agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"Add 500 taka expense for lunch today\",\"session_id\":\"optional_session_id\",\"table_id\":1,\"context_type\":\"expense\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/agent/query/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "query", ""]
+            }
+          }
+        },
+        {
+          "name": "Agent Streaming",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"query\":\"Show me my expenses for today\",\"session_id\":\"optional_session_id\",\"table_id\":1}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/agent/streaming/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "streaming", ""]
+            }
+          }
+        },
+        {
+          "name": "Agent History",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/agent/history/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "history", ""]
+            }
+          }
+        },
+        {
+          "name": "Agent Status",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/agent/query/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "query", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat Sessions",
+      "item": [
+        {
+          "name": "Create Chat Session",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Expense Discussion\",\"is_active\":true}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/agent/chat/sessions/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "chat", "sessions", ""]
+            }
+          }
+        },
+        {
+          "name": "List Chat Sessions",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/agent/chat/sessions/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "chat", "sessions", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Chat Session Details",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/agent/chat/sessions/chat_1_1707232000/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "chat", "sessions", "chat_1_1707232000", ""]
+            }
+          }
+        },
+        {
+          "name": "Update Chat Session",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"title\":\"Updated Session Title\",\"is_active\":false}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/agent/chat/sessions/chat_1_1707232000/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "chat", "sessions", "chat_1_1707232000", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete Chat Session",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/agent/chat/sessions/chat_1_1707232000/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "chat", "sessions", "chat_1_1707232000", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat Messages",
+      "item": [
+        {
+          "name": "Get Session Messages",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/agent/chat/sessions/chat_1_1707232000/messages/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "chat", "sessions", "chat_1_1707232000", "messages", ""]
+            }
+          }
+        },
+        {
+          "name": "Save Session Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"message_id\":\"msg_1\",\"text\":\"Add 500 taka for lunch\",\"sender\":\"user\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/agent/chat/sessions/chat_1_1707232000/messages/save/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "chat", "sessions", "chat_1_1707232000", "messages", "save", ""]
+            }
+          }
+        },
+        {
+          "name": "Clear Session Messages",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/agent/chat/sessions/chat_1_1707232000/messages/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["agent", "chat", "sessions", "chat_1_1707232000", "messages", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Tables Management",
+      "item": [
+        {
+          "name": "Create Table",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"table_name\":\"Expenses\",\"headers\":[\"Date\",\"Category\",\"Amount\",\"Description\"]}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/main/create-tableContent/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["main", "create-tableContent", ""]
+            }
+          }
+        },
+        {
+          "name": "List Tables",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/main/tables/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["main", "tables", ""]
+            }
+          }
+        },
+        {
+          "name": "Get Table Content",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/main/table-contents/?table_id=1",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["main", "table-contents", ""],
+              "query": [{"key": "table_id", "value": "1"}]
+            }
+          }
+        },
+        {
+          "name": "Add Row",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"tableId\":1,\"row\":{\"Date\":\"2024-01-31\",\"Category\":\"Food\",\"Amount\":\"50.00\",\"Description\":\"Lunch\"}}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/main/add-row/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["main", "add-row", ""]
+            }
+          }
+        },
+        {
+          "name": "Update Row",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"tableId\":1,\"rowId\":1,\"newRowData\":{\"Date\":\"2024-01-31\",\"Category\":\"Food Updated\",\"Amount\":\"60.00\",\"Description\":\"Lunch Updated\"}}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/main/update-row/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["main", "update-row", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete Row",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"tableId\":1,\"rowId\":1}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/main/delete-row/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["main", "delete-row", ""]
+            }
+          }
+        },
+        {
+          "name": "Add Column",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"tableId\":1,\"header\":\"Status\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/main/add-column/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["main", "add-column", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete Column",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"tableId\":1,\"header\":\"Status\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/main/delete-column/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["main", "delete-column", ""]
+            }
+          }
+        },
+        {
+          "name": "Delete Table",
+          "request": {
+            "method": "DELETE",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/main/tables/1/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["main", "tables", "1", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "List All Users",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/auth/users-list/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["auth", "users-list", ""]
+            }
+          }
+        },
+        {
+          "name": "Get User Details",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/auth/users-list/1/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["auth", "users-list", "1", ""]
+            }
+          }
+        },
+        {
+          "name": "Update User Details",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"first_name\":\"John\",\"last_name\":\"Doe\",\"email\":\"john@example.com\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/auth/update/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["auth", "update", ""]
+            }
+          }
+        },
+        {
+          "name": "Update User Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"bio\":\"A user bio\",\"profile_picture\":\"url_to_image\"}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/auth/update-profile/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["auth", "update-profile", ""]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Friends Management",
+      "item": [
+        {
+          "name": "List Friends",
+          "request": {
+            "method": "GET",
+            "header": [{"key": "Authorization", "value": "Bearer <access_token>"}],
+            "url": {
+              "raw": "http://localhost:8000/auth/friends/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["auth", "friends", ""]
+            }
+          }
+        },
+        {
+          "name": "Manage Friend (Add/Remove)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {"key": "Content-Type", "value": "application/json"},
+              {"key": "Authorization", "value": "Bearer <access_token>"}
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\"action\":\"add\",\"friend_id\":2}"
+            },
+            "url": {
+              "raw": "http://localhost:8000/auth/friends/manage/",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8000",
+              "path": ["auth", "friends", "manage", ""]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

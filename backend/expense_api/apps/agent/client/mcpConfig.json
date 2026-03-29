@@ -2,7 +2,10 @@
   "mcpServers": {
     "finance_server": {
       "command": "python",
-      "args": ["{SERVER_SCRIPT_PATH}"]
+      "args": [
+        "-m",
+        "expense_api.apps.agent.servers.finance_mcp_server"
+      ]
     }
   }
 }
