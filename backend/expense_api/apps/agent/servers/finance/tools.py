@@ -1,17 +1,20 @@
 """MCP tool definitions for finance management."""
-from typing import Optional
 
+from typing import Optional
 from pydantic import Field
 
-from .server import mcp
-from .services import TableService, RowService, SchemaService, QueryService
+# Import from our new instance file, NOT from server.py
+from .mcp_instance import mcp
+
+def get_services():
+    from .services import TableService, RowService, SchemaService, QueryService
+    return TableService, RowService, SchemaService, QueryService
 
 
 @mcp.tool()
-async def get_user_tables(
-    user_id: int = Field(default=1, exclude=True),
-) -> str:
+async def get_user_tables(user_id: int = Field(default=1, exclude=True)) -> str:
     """Get all dynamic tables belonging to the authenticated user."""
+    TableService, _, _, _ = get_services()
     return await TableService.get_user_tables(user_id)
 
 
@@ -23,6 +26,7 @@ async def create_table(
     user_id: int = Field(default=1, exclude=True),
 ) -> str:
     """Create a new table with the given name, description, and column headers."""
+    TableService, _, _, _ = get_services()
     return await TableService.create_table(user_id, table_name, description, headers)
 
 
@@ -33,6 +37,7 @@ async def add_table_row(
     user_id: int = Field(default=1, exclude=True),
 ) -> str:
     """Add a new row to a table. Ownership is verified automatically."""
+    _, RowService, _, _ = get_services()
     return await RowService.add_table_row(user_id, table_id, row_data)
 
 
@@ -44,6 +49,7 @@ async def update_table_row(
     user_id: int = Field(default=1, exclude=True),
 ) -> str:
     """Update an existing row in a table. Ownership is verified automatically."""
+    _, RowService, _, _ = get_services()
     return await RowService.update_table_row(user_id, table_id, row_id, new_data)
 
 
@@ -54,6 +60,7 @@ async def delete_table_row(
     user_id: int = Field(default=1, exclude=True),
 ) -> str:
     """Delete a row from a table. Ownership is verified automatically."""
+    _, RowService, _, _ = get_services()
     return await RowService.delete_table_row(user_id, table_id, row_id)
 
 
@@ -62,10 +69,8 @@ async def get_table_content(
     table_id: Optional[int] = Field(default=None, description="The numeric ID of the table to retrieve. Omit to get content for all user tables."),
     user_id: int = Field(default=1, exclude=True),
 ) -> str:
-    """
-    Return the full content (headers + rows) of a table.
-    If table_id is omitted, returns content for all tables owned by the user.
-    """
+    """Return the full content (headers + rows) of a table. If table_id is omitted, returns content for all tables owned by the user."""
+    _, _, _, QueryService = get_services()
     return await QueryService.get_table_content(user_id, table_id)
 
 
@@ -76,6 +81,7 @@ async def add_table_column(
     user_id: int = Field(default=1, exclude=True),
 ) -> str:
     """Add a new column to a table. Existing rows are backfilled with null."""
+    _, _, SchemaService, _ = get_services()
     return await SchemaService.add_table_column(user_id, table_id, header)
 
 
@@ -86,6 +92,7 @@ async def delete_table_columns(
     user_id: int = Field(default=1, exclude=True),
 ) -> str:
     """Remove one or more columns from a table and strip their data from all rows."""
+    _, _, SchemaService, _ = get_services()
     return await SchemaService.delete_table_columns(user_id, table_id, headers_to_remove)
 
 
@@ -97,6 +104,7 @@ async def update_table_metadata(
     user_id: int = Field(default=1, exclude=True),
 ) -> str:
     """Update a table's name, description, or both. Omit a field to leave it unchanged."""
+    TableService, _, _, _ = get_services()
     return await TableService.update_table_metadata(user_id, table_id, table_name, description)
 
 
@@ -106,4 +114,5 @@ async def delete_table(
     user_id: int = Field(default=1, exclude=True),
 ) -> str:
     """Delete an entire table along with all its rows. This action is irreversible."""
+    TableService, _, _, _ = get_services()
     return await TableService.delete_table(user_id, table_id)
