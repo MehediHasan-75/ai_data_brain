@@ -19,8 +19,7 @@ from mcp.client.stdio import stdio_client
 from langgraph.prebuilt import create_react_agent
 from langchain_mcp_adapters.tools import load_mcp_tools
 
-from .config import LLMProvider, MCPClientConfig, RESPONSE_TEMPLATES
-from .analyzer import DataAnalyzer, TableMatcher, ResponseFormatter
+from .config import LLMProvider, MCPClientConfig
 
 
 DEBUG = os.environ.get("MCP_DEBUG", "false").lower() == "true"
@@ -59,20 +58,6 @@ Guidelines:
 """
 
 
-class FinanceDataAnalyzer(DataAnalyzer):
-    """Finance-specific data analyzer."""
-    
-    def __init__(self):
-        super().__init__({
-            'expenses': ['khoroch', 'expense', 'cost', 'spent', 'buy', 'purchase'],
-            'income': ['income', 'revenue', 'earned', 'salary'],
-            'location': ['sylhet', 'dhaka', 'chittagong', 'travel'],
-            'time': ['daily', 'monthly', 'yearly', 'ajk', 'today'],
-            'inventory': ['inventory', 'stock', 'supplies'],
-            'health': ['exercise', 'workout', 'fitness', 'meal'],
-        })
-
-
 class MCPClient:
     """Main MCP Client for managing finance data."""
     
@@ -90,8 +75,6 @@ class MCPClient:
             raise ValueError(f"API key required for {llm_provider}")
         
         self.llm_provider = LLMProvider.create_provider(llm_provider, self.api_key, llm_model)
-        self.analyzer = FinanceDataAnalyzer()
-        self.table_matcher = TableMatcher()
         
         # MCP configuration
         self.config_path = config_path or self._get_config_path()
@@ -181,29 +164,17 @@ class MCPClient:
                 }
         
         try:
-            intent = self.analyzer.extract_intent(query)
-
-            full_query = (
-                f"[SYSTEM CONTEXT] user_id={user_id}\n\n"
-                f"Query: {query}\n"
-                f"Intent: {intent['type']} | "
-                f"Categories: {', '.join(intent['categories'])} | "
-                f"Confidence: {intent['confidence']:.0%}"
-            )
-
             response = await self.agent.ainvoke(
-                {"messages": full_query},
+                {"messages": query},
                 {"recursion_limit": 15},
             )
-            
-            # Extract response
+
             final_response = self._extract_response_content(response)
-            
+
             return {
                 "success": True,
                 "message": "Query processed successfully",
                 "query": query,
-                "intent": intent,
                 "response": final_response,
                 "llm_provider": self.llm_provider_name,
             }
