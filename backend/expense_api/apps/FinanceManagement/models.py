@@ -1,7 +1,12 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+from .managers import DynamicTableDataManager, JsonTableRowManager
+
+
 class DynamicTableData(models.Model):
+    objects = DynamicTableDataManager()
+
     table_name = models.CharField(max_length=255)
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='owned_tables')
     shared_with = models.ManyToManyField(User, related_name='shared_tables', blank=True)
@@ -24,6 +29,8 @@ class JsonTable(models.Model):
 
 
 class JsonTableRow(models.Model):
+    objects = JsonTableRowManager()
+
     table = models.ForeignKey(JsonTable, related_name='rows', on_delete=models.CASCADE)
     data = models.JSONField()  # Store each row as a JSON object
 
