@@ -39,14 +39,18 @@ class TableService:
 
             user = await User.objects.aget(id=user_id)
 
-            async with transaction.aatomic():
-                table = await DynamicTableData.objects.acreate(
-                    table_name=table_name.strip(),
-                    description=description.strip() if description else "",
-                    user=user,
-                    pending_count=0,
-                )
-                await JsonTable.objects.acreate(table=table, headers=headers_list)
+            def _create_sync():
+                with transaction.atomic():
+                    t = DynamicTableData.objects.create(
+                        table_name=table_name.strip(),
+                        description=description.strip() if description else "",
+                        user=user,
+                        pending_count=0,
+                    )
+                    JsonTable.objects.create(table=t, headers=headers_list)
+                    return t
+
+            table = await sync_to_async(_create_sync)()
 
             logger.log_operation("create_table", user_id, {"table_id": table.id}, True)
             return ResponseBuilder.success(
