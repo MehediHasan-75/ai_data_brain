@@ -201,6 +201,157 @@ class FinanceToolsManager:
         except Exception as e:
             return ResponseBuilder.error("Failed to delete row", str(e))
 
+    @staticmethod
+    async def get_table_content(table_id: Optional[int] = None) -> str:
+        user_id = get_current_user_id()
+        try:
+            if table_id is None:
+                user = await sync_to_async(User.objects.get)(id=user_id)
+                tables = await sync_to_async(
+                    lambda: list(DynamicTableData.objects.filter(user=user))
+                )()
+                result = []
+                for table in tables:
+                    json_table = await sync_to_async(
+                        lambda t=table: JsonTable.objects.get(pk=t.id)
+                    )()
+                    rows = await sync_to_async(lambda jt=json_table: list(jt.rows.all()))()
+                    result.append({
+                        "table_id": table.id,
+                        "table_name": table.table_name,
+                        "headers": json_table.headers,
+                        "rows": [r.data for r in rows],
+                    })
+                return ResponseBuilder.success(f"Returned content for {len(result)} tables", result)
+
+            if not await FinanceToolsManager._owns_table(table_id):
+                return ResponseBuilder.error("Access denied", "Table not found or not owned by you", 403)
+
+            json_table = await sync_to_async(JsonTable.objects.get)(pk=table_id)
+            rows = await sync_to_async(lambda: list(json_table.rows.all()))()
+            return ResponseBuilder.success(
+                f"Found {len(rows)} rows",
+                {
+                    "table_id": table_id,
+                    "table_name": json_table.table.table_name,
+                    "headers": json_table.headers,
+                    "rows": [r.data for r in rows],
+                },
+            )
+        except (JsonTable.DoesNotExist, User.DoesNotExist):
+            return ResponseBuilder.not_found("Table", table_id)
+        except Exception as e:
+            return ResponseBuilder.error("Failed to get table content", str(e))
+
+    @staticmethod
+    async def add_table_column(table_id: int, header: str) -> str:
+        user_id = get_current_user_id()
+        try:
+            if not await FinanceToolsManager._owns_table(table_id):
+                return ResponseBuilder.error("Access denied", "Table not found or not owned by you", 403)
+
+            json_table = await sync_to_async(JsonTable.objects.get)(pk=table_id)
+
+            if header in json_table.headers:
+                return ResponseBuilder.error("Column already exists", f"Header '{header}' already present")
+
+            @sync_to_async
+            def _add_column():
+                with transaction.atomic():
+                    json_table.headers = json_table.headers + [header]
+                    json_table.save()
+                    for row in json_table.rows.all():
+                        row.data[header] = None
+                        row.save()
+
+            await _add_column()
+            logger.log_operation("add_table_column", user_id, {"table_id": table_id, "header": header}, True)
+            return ResponseBuilder.success(
+                f"Column '{header}' added",
+                {"table_id": table_id, "headers": json_table.headers},
+            )
+        except JsonTable.DoesNotExist:
+            return ResponseBuilder.not_found("Table", table_id)
+        except Exception as e:
+            return ResponseBuilder.error("Failed to add column", str(e))
+
+    @staticmethod
+    async def delete_table_columns(table_id: int, headers_to_remove: list) -> str:
+        user_id = get_current_user_id()
+        try:
+            if not await FinanceToolsManager._owns_table(table_id):
+                return ResponseBuilder.error("Access denied", "Table not found or not owned by you", 403)
+
+            json_table = await sync_to_async(JsonTable.objects.get)(pk=table_id)
+
+            @sync_to_async
+            def _remove_columns():
+                with transaction.atomic():
+                    new_headers = [h for h in json_table.headers if h not in headers_to_remove]
+                    json_table.headers = new_headers
+                    json_table.save()
+                    for row in json_table.rows.all():
+                        for h in headers_to_remove:
+                            row.data.pop(h, None)
+                        row.save()
+                    return new_headers
+
+            new_headers = await _remove_columns()
+            logger.log_operation("delete_table_columns", user_id, {"table_id": table_id, "removed": headers_to_remove}, True)
+            return ResponseBuilder.success(
+                f"Removed {len(headers_to_remove)} column(s)",
+                {"table_id": table_id, "headers": new_headers},
+            )
+        except JsonTable.DoesNotExist:
+            return ResponseBuilder.not_found("Table", table_id)
+        except Exception as e:
+            return ResponseBuilder.error("Failed to remove columns", str(e))
+
+    @staticmethod
+    async def update_table_metadata(
+        table_id: int,
+        table_name: Optional[str] = None,
+        description: Optional[str] = None,
+    ) -> str:
+        user_id = get_current_user_id()
+        try:
+            if not await FinanceToolsManager._owns_table(table_id):
+                return ResponseBuilder.error("Access denied", "Table not found or not owned by you", 403)
+
+            table = await sync_to_async(DynamicTableData.objects.get)(id=table_id)
+
+            if table_name is not None:
+                table.table_name = table_name.strip()
+            if description is not None:
+                table.description = description.strip()
+
+            await sync_to_async(table.save)()
+            logger.log_operation("update_table_metadata", user_id, {"table_id": table_id}, True)
+            return ResponseBuilder.success(
+                "Table metadata updated",
+                {"table_id": table_id, "table_name": table.table_name, "description": table.description},
+            )
+        except DynamicTableData.DoesNotExist:
+            return ResponseBuilder.not_found("Table", table_id)
+        except Exception as e:
+            return ResponseBuilder.error("Failed to update metadata", str(e))
+
+    @staticmethod
+    async def delete_table(table_id: int) -> str:
+        user_id = get_current_user_id()
+        try:
+            if not await FinanceToolsManager._owns_table(table_id):
+                return ResponseBuilder.error("Access denied", "Table not found or not owned by you", 403)
+
+            table = await sync_to_async(DynamicTableData.objects.get)(id=table_id)
+            await sync_to_async(table.delete)()
+            logger.log_operation("delete_table", user_id, {"table_id": table_id}, True)
+            return ResponseBuilder.success(f"Table {table_id} deleted successfully")
+        except DynamicTableData.DoesNotExist:
+            return ResponseBuilder.not_found("Table", table_id)
+        except Exception as e:
+            return ResponseBuilder.error("Failed to delete table", str(e))
+
 
 tools_mgr = FinanceToolsManager()
 
@@ -246,6 +397,43 @@ async def update_table_row(table_id: int, row_id: str, new_data) -> str:
 async def delete_table_row(table_id: int, row_id: str) -> str:
     """Delete a row from a table. Ownership is verified automatically."""
     return await tools_mgr.delete_table_row(table_id, row_id)
+
+
+@mcp.tool()
+async def get_table_content(table_id: Optional[int] = None) -> str:
+    """
+    Return the full content (headers + rows) of a table.
+    If table_id is omitted, returns content for all tables owned by the user.
+    """
+    return await tools_mgr.get_table_content(table_id)
+
+
+@mcp.tool()
+async def add_table_column(table_id: int, header: str) -> str:
+    """Add a new column to a table. Existing rows are backfilled with null."""
+    return await tools_mgr.add_table_column(table_id, header)
+
+
+@mcp.tool()
+async def delete_table_columns(table_id: int, headers_to_remove: list) -> str:
+    """Remove one or more columns from a table and strip their data from all rows."""
+    return await tools_mgr.delete_table_columns(table_id, headers_to_remove)
+
+
+@mcp.tool()
+async def update_table_metadata(
+    table_id: int,
+    table_name: Optional[str] = None,
+    description: Optional[str] = None,
+) -> str:
+    """Update a table's name, description, or both. Omit a field to leave it unchanged."""
+    return await tools_mgr.update_table_metadata(table_id, table_name, description)
+
+
+@mcp.tool()
+async def delete_table(table_id: int) -> str:
+    """Delete an entire table along with all its rows. This action is irreversible."""
+    return await tools_mgr.delete_table(table_id)
 
 
 if __name__ == "__main__":
