@@ -1,6 +1,6 @@
 """MCP tool definitions for finance management."""
 
-from typing import Optional, List, Dict, Any
+from typing import Annotated, Optional, List, Dict, Any
 from pydantic import Field
 
 # Import from our new instance file, NOT from server.py
@@ -13,7 +13,7 @@ from .services import TableService, RowService, SchemaService, QueryService
     name="get_user_tables",
     description="Get all dynamic tables belonging to the authenticated user."
 )
-async def get_user_tables(user_id: int = Field(default=1, description="The numeric ID of the user.")) -> str:
+async def get_user_tables(user_id: Annotated[int, Field(description="The numeric ID of the user.")] = 1) -> str:
     return await TableService.get_user_tables(user_id)
 
 
@@ -22,10 +22,10 @@ async def get_user_tables(user_id: int = Field(default=1, description="The numer
     description="Create a new table with the given name, description, and column headers."
 )
 async def create_table(
-    table_name: str = Field(description="The name for the new table, e.g. 'Monthly Expenses'."),
-    description: str = Field(description="A short description of what this table tracks."),
-    headers: List[str] = Field(description='A JSON array of column header strings, e.g. ["Date", "Amount", "Category"].'),
-    user_id: int = Field(default=1, description="The numeric ID of the user."),
+    table_name: Annotated[str, Field(description="The name for the new table, e.g. 'Monthly Expenses'.")],
+    description: Annotated[str, Field(description="A short description of what this table tracks.")],
+    headers: Annotated[List[str], Field(description='A JSON array of column header strings, e.g. ["Date", "Amount", "Category"].')],
+    user_id: Annotated[int, Field(description="The numeric ID of the user.")] = 1,
 ) -> str:
     return await TableService.create_table(user_id, table_name, description, headers)
 
@@ -35,9 +35,9 @@ async def create_table(
     description="Add a new row to a table. Ownership is verified automatically."
 )
 async def add_table_row(
-    table_id: int = Field(description="The numeric ID of the table to insert a row into."),
-    row_data: Dict[str, Any] = Field(description='A JSON object mapping column names to values, e.g. {"Date": "2026-03-29", "Amount": 500}.'),
-    user_id: int = Field(default=1, description="The numeric ID of the user."),
+    table_id: Annotated[int, Field(description="The numeric ID of the table to insert a row into.")],
+    row_data: Annotated[Dict[str, Any], Field(description='A JSON object mapping column names to values, e.g. {"Date": "2026-03-29", "Amount": 500}.')],
+    user_id: Annotated[int, Field(description="The numeric ID of the user.")] = 1,
 ) -> str:
     return await RowService.add_table_row(user_id, table_id, row_data)
 
@@ -47,10 +47,10 @@ async def add_table_row(
     description="Update an existing row in a table. Ownership is verified automatically."
 )
 async def update_table_row(
-    table_id: int = Field(description="The numeric ID of the table containing the row."),
-    row_id: str = Field(description="The unique ID of the row to update (found in the 'id' field of the row data)."),
-    new_data: Dict[str, Any] = Field(description="A JSON object with the fields to update. Only provided keys are changed."),
-    user_id: int = Field(default=1, description="The numeric ID of the user."),
+    table_id: Annotated[int, Field(description="The numeric ID of the table containing the row.")],
+    row_id: Annotated[str, Field(description="The unique ID of the row to update (found in the 'id' field of the row data).")],
+    new_data: Annotated[Dict[str, Any], Field(description="A JSON object with the fields to update. Only provided keys are changed.")],
+    user_id: Annotated[int, Field(description="The numeric ID of the user.")] = 1,
 ) -> str:
     return await RowService.update_table_row(user_id, table_id, row_id, new_data)
 
@@ -60,9 +60,9 @@ async def update_table_row(
     description="Delete a row from a table. Ownership is verified automatically."
 )
 async def delete_table_row(
-    table_id: int = Field(description="The numeric ID of the table containing the row."),
-    row_id: str = Field(description="The unique ID of the row to delete."),
-    user_id: int = Field(default=1, description="The numeric ID of the user."),
+    table_id: Annotated[int, Field(description="The numeric ID of the table containing the row.")],
+    row_id: Annotated[str, Field(description="The unique ID of the row to delete.")],
+    user_id: Annotated[int, Field(description="The numeric ID of the user.")] = 1,
 ) -> str:
     return await RowService.delete_table_row(user_id, table_id, row_id)
 
@@ -72,8 +72,8 @@ async def delete_table_row(
     description="Return the full content (headers + rows) of a table. If table_id is omitted, returns content for all tables owned by the user."
 )
 async def get_table_content(
-    table_id: Optional[int] = Field(default=None, description="The numeric ID of the table to retrieve. Omit to get content for all user tables."),
-    user_id: int = Field(default=1, description="The numeric ID of the user."),
+    table_id: Annotated[Optional[int], Field(description="The numeric ID of the table to retrieve. Omit to get content for all user tables.")] = None,
+    user_id: Annotated[int, Field(description="The numeric ID of the user.")] = 1,
 ) -> str:
     return await QueryService.get_table_content(user_id, table_id)
 
@@ -83,9 +83,9 @@ async def get_table_content(
     description="Add a new column to a table. Existing rows are backfilled with null."
 )
 async def add_table_column(
-    table_id: int = Field(description="The numeric ID of the table to add a column to."),
-    header: str = Field(description="The name of the new column to add, e.g. 'Notes'."),
-    user_id: int = Field(default=1, description="The numeric ID of the user."),
+    table_id: Annotated[int, Field(description="The numeric ID of the table to add a column to.")],
+    header: Annotated[str, Field(description="The name of the new column to add, e.g. 'Notes'.")],
+    user_id: Annotated[int, Field(description="The numeric ID of the user.")] = 1,
 ) -> str:
     return await SchemaService.add_table_column(user_id, table_id, header)
 
@@ -95,9 +95,9 @@ async def add_table_column(
     description="Remove one or more columns from a table and strip their data from all rows."
 )
 async def delete_table_columns(
-    table_id: int = Field(description="The numeric ID of the table to remove columns from."),
-    headers_to_remove: List[str] = Field(description='A JSON array of column names to delete, e.g. ["Notes", "Tags"].'),
-    user_id: int = Field(default=1, description="The numeric ID of the user."),
+    table_id: Annotated[int, Field(description="The numeric ID of the table to remove columns from.")],
+    headers_to_remove: Annotated[List[str], Field(description='A JSON array of column names to delete, e.g. ["Notes", "Tags"].')],
+    user_id: Annotated[int, Field(description="The numeric ID of the user.")] = 1,
 ) -> str:
     return await SchemaService.delete_table_columns(user_id, table_id, headers_to_remove)
 
@@ -107,10 +107,10 @@ async def delete_table_columns(
     description="Update a table's name, description, or both. Omit a field to leave it unchanged."
 )
 async def update_table_metadata(
-    table_id: int = Field(description="The numeric ID of the table to update."),
-    table_name: Optional[str] = Field(default=None, description="The new name for the table. Omit to leave unchanged."),
-    description: Optional[str] = Field(default=None, description="The new description for the table. Omit to leave unchanged."),
-    user_id: int = Field(default=1, description="The numeric ID of the user."),
+    table_id: Annotated[int, Field(description="The numeric ID of the table to update.")],
+    table_name: Annotated[Optional[str], Field(description="The new name for the table. Omit to leave unchanged.")] = None,
+    description: Annotated[Optional[str], Field(description="The new description for the table. Omit to leave unchanged.")] = None,
+    user_id: Annotated[int, Field(description="The numeric ID of the user.")] = 1,
 ) -> str:
     return await TableService.update_table_metadata(user_id, table_id, table_name, description)
 
@@ -120,7 +120,7 @@ async def update_table_metadata(
     description="Delete an entire table along with all its rows. This action is irreversible."
 )
 async def delete_table(
-    table_id: int = Field(description="The numeric ID of the table to permanently delete, including all its rows."),
-    user_id: int = Field(default=1, description="The numeric ID of the user."),
+    table_id: Annotated[int, Field(description="The numeric ID of the table to permanently delete, including all its rows.")],
+    user_id: Annotated[int, Field(description="The numeric ID of the user.")] = 1,
 ) -> str:
     return await TableService.delete_table(user_id, table_id)

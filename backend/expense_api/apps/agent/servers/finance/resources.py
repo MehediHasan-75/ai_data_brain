@@ -3,7 +3,6 @@
 import os
 import django
 
-# 1. Ensure Django is configured before accessing the ORM
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "expense_api.settings")
 django.setup()
 

@@ -1,7 +1,8 @@
+"""Finance MCP server entry point."""
 from expense_api.apps.agent.servers.finance.mcp_instance import mcp
 
-# 2. Import tools, resources, and prompts so they attach to the instance
-from expense_api.apps.agent.servers.finance import tools, resources, prompts
+# Side-effect imports: registering tools, resources, and prompts against the mcp instance.
+from expense_api.apps.agent.servers.finance import tools, resources, prompts  # noqa: F401
 
 
 if __name__ == "__main__":

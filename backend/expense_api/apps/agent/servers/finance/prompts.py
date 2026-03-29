@@ -7,7 +7,7 @@ a fully-formed instruction so the behaviour is consistent and reproducible every
 """
 from mcp.server.fastmcp import Context
 
-from .server import mcp
+from .mcp_instance import mcp
 
 
 @mcp.prompt()

@@ -30,7 +30,7 @@ class QueryService:
             if not await owns_table(table_id, user_id):
                 return ResponseBuilder.error("Access denied", "Table not found or not owned by you", 403)
 
-            json_table = await JsonTable.objects.aget(pk=table_id)
+            json_table = await JsonTable.objects.select_related("table").aget(pk=table_id)
             rows = [r async for r in json_table.rows.all()]
             return ResponseBuilder.success(
                 f"Found {len(rows)} rows",
