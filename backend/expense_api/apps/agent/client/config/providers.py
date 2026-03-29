@@ -1,14 +1,8 @@
-"""
-LLM provider configuration for the MCP client.
-
-Claude (Anthropic) is the primary provider. Google and DeepSeek are
-available as alternatives — swap by passing llm_provider to the client.
-"""
-
+"""LLM provider configuration and MCP config loader."""
 import os
 import json
 from typing import Optional, Dict, Any
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 
 @dataclass

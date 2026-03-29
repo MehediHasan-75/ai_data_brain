@@ -4,7 +4,7 @@
       "command": "python",
       "args": [
         "-m",
-        "expense_api.apps.agent.servers.finance_mcp_server"
+        "expense_api.apps.agent.servers.finance"
       ]
     }
   }

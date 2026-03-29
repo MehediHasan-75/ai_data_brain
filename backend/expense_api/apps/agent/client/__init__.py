@@ -1,5 +1,4 @@
-"""
-MCP Client Package
+from .core.local_client import run_query, stream_query
+from .core.stdio_client import MCPClient, ExpenseMCPClient
 
-Contains MCP client implementations and utilities.
-"""
+__all__ = ["run_query", "stream_query", "MCPClient", "ExpenseMCPClient"]

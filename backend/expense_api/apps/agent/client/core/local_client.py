@@ -17,8 +17,9 @@ from typing import Optional, Any, Dict, AsyncGenerator
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 
-from ..servers.finance_mcp_server import tools_mgr, _current_user_id
-from .config import LLMProvider
+from ...servers.finance import tools_mgr, _current_user_id
+from ..config.providers import LLMProvider
+from ..prompts.system import SYSTEM_PROMPT
 
 
 def set_current_user(user_id: int) -> None:
@@ -121,7 +122,7 @@ def get_agent(llm_provider: str = "anthropic", llm_model: str = "claude-sonnet-4
         if not api_key:
             raise RuntimeError(f"Missing environment variable: {llm_provider.upper()}_API_KEY")
         llm = LLMProvider.create_provider(llm_provider, api_key, llm_model).get_client()
-        _agent = create_react_agent(llm, TOOLS)
+        _agent = create_react_agent(llm, TOOLS, prompt=SYSTEM_PROMPT)
     return _agent
 
 
