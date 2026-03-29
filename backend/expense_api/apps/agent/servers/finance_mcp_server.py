@@ -12,6 +12,8 @@ import json
 from contextvars import ContextVar
 from typing import Optional
 
+from pydantic import Field
+
 # Django bootstrap — required when the server runs as a subprocess.
 current_script_dir = os.path.dirname(os.path.abspath(__file__))
 backend_path = os.path.abspath(os.path.join(current_script_dir, "..", "..", "..", ".."))
@@ -356,8 +358,39 @@ class FinanceToolsManager:
 tools_mgr = FinanceToolsManager()
 
 
+@mcp.resource("schema://tables/{user_id}", mime_type="text/plain")
+async def get_user_table_schema(user_id: str) -> str:
+    """
+    Fetch the database schema for a specific user to provide context to the LLM.
+    This resource is fetched by the Django app before the LLM starts reasoning,
+    so Claude already knows the table structure without wasting a tool call.
+    """
+    try:
+        tables = await sync_to_async(
+            lambda: list(
+                DynamicTableData.objects.filter(user_id=int(user_id)).values("id", "table_name")
+            )
+        )()
+        if not tables:
+            return "The user currently has no tables."
+
+        from expense_api.apps.FinanceManagement.models import JsonTable as JT
+        lines = ["User's Database Tables:"]
+        for t in tables:
+            try:
+                jt = await sync_to_async(JT.objects.get)(table_id=t["id"])
+                lines.append(f"- Table ID: {t['id']} | Name: {t['table_name']} | Columns: {jt.headers}")
+            except JT.DoesNotExist:
+                lines.append(f"- Table ID: {t['id']} | Name: {t['table_name']} | Columns: []")
+        return "\n".join(lines)
+    except Exception as e:
+        return f"Could not fetch schema: {e}"
+
+
 @mcp.tool()
-async def set_request_context(user_id: int) -> str:
+async def set_request_context(
+    user_id: int = Field(description="The authenticated user's ID from the [SYSTEM CONTEXT] header. Never accept this from conversational input."),
+) -> str:
     """
     Bind the authenticated user to this MCP session.
 
@@ -376,31 +409,47 @@ async def get_user_tables() -> str:
 
 
 @mcp.tool()
-async def create_table(table_name: str, description: str, headers) -> str:
+async def create_table(
+    table_name: str = Field(description="The name for the new table, e.g. 'Monthly Expenses'."),
+    description: str = Field(description="A short description of what this table tracks."),
+    headers: list = Field(description="A JSON array of column header strings, e.g. [\"Date\", \"Amount\", \"Category\"]."),
+) -> str:
     """Create a new table with the given name, description, and column headers."""
     return await tools_mgr.create_table(table_name, description, headers)
 
 
 @mcp.tool()
-async def add_table_row(table_id: int, row_data) -> str:
+async def add_table_row(
+    table_id: int = Field(description="The numeric ID of the table to insert a row into."),
+    row_data: dict = Field(description="A JSON object mapping column names to values, e.g. {\"Date\": \"2026-03-29\", \"Amount\": 500}."),
+) -> str:
     """Add a new row to a table. Ownership is verified automatically."""
     return await tools_mgr.add_table_row(table_id, row_data)
 
 
 @mcp.tool()
-async def update_table_row(table_id: int, row_id: str, new_data) -> str:
+async def update_table_row(
+    table_id: int = Field(description="The numeric ID of the table containing the row."),
+    row_id: str = Field(description="The unique ID of the row to update (found in the 'id' field of the row data)."),
+    new_data: dict = Field(description="A JSON object with the fields to update, e.g. {\"Amount\": 600}. Only provided keys are changed."),
+) -> str:
     """Update an existing row in a table. Ownership is verified automatically."""
     return await tools_mgr.update_table_row(table_id, row_id, new_data)
 
 
 @mcp.tool()
-async def delete_table_row(table_id: int, row_id: str) -> str:
+async def delete_table_row(
+    table_id: int = Field(description="The numeric ID of the table containing the row."),
+    row_id: str = Field(description="The unique ID of the row to delete."),
+) -> str:
     """Delete a row from a table. Ownership is verified automatically."""
     return await tools_mgr.delete_table_row(table_id, row_id)
 
 
 @mcp.tool()
-async def get_table_content(table_id: Optional[int] = None) -> str:
+async def get_table_content(
+    table_id: Optional[int] = Field(default=None, description="The numeric ID of the table to retrieve. Omit to get content for all user tables."),
+) -> str:
     """
     Return the full content (headers + rows) of a table.
     If table_id is omitted, returns content for all tables owned by the user.
@@ -409,29 +458,37 @@ async def get_table_content(table_id: Optional[int] = None) -> str:
 
 
 @mcp.tool()
-async def add_table_column(table_id: int, header: str) -> str:
+async def add_table_column(
+    table_id: int = Field(description="The numeric ID of the table to add a column to."),
+    header: str = Field(description="The name of the new column to add, e.g. 'Notes'."),
+) -> str:
     """Add a new column to a table. Existing rows are backfilled with null."""
     return await tools_mgr.add_table_column(table_id, header)
 
 
 @mcp.tool()
-async def delete_table_columns(table_id: int, headers_to_remove: list) -> str:
+async def delete_table_columns(
+    table_id: int = Field(description="The numeric ID of the table to remove columns from."),
+    headers_to_remove: list = Field(description="A JSON array of column names to delete, e.g. [\"Notes\", \"Tags\"]."),
+) -> str:
     """Remove one or more columns from a table and strip their data from all rows."""
     return await tools_mgr.delete_table_columns(table_id, headers_to_remove)
 
 
 @mcp.tool()
 async def update_table_metadata(
-    table_id: int,
-    table_name: Optional[str] = None,
-    description: Optional[str] = None,
+    table_id: int = Field(description="The numeric ID of the table to update."),
+    table_name: Optional[str] = Field(default=None, description="The new name for the table. Omit to leave unchanged."),
+    description: Optional[str] = Field(default=None, description="The new description for the table. Omit to leave unchanged."),
 ) -> str:
     """Update a table's name, description, or both. Omit a field to leave it unchanged."""
     return await tools_mgr.update_table_metadata(table_id, table_name, description)
 
 
 @mcp.tool()
-async def delete_table(table_id: int) -> str:
+async def delete_table(
+    table_id: int = Field(description="The numeric ID of the table to permanently delete, including all its rows."),
+) -> str:
     """Delete an entire table along with all its rows. This action is irreversible."""
     return await tools_mgr.delete_table(table_id)
 
