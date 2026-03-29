@@ -1,7 +1,7 @@
 """Schema operations: add and remove columns."""
 from django.db import transaction
 
-from expense_api.apps.FinanceManagement.models import JsonTable
+from expense_api.apps.FinanceManagement.models import DynamicTableData, JsonTable
 from expense_api.apps.agent.servers.base import OperationLogger, ResponseBuilder
 
 from ._base import owns_table
@@ -63,3 +63,24 @@ class SchemaService:
             return ResponseBuilder.not_found("Table", table_id)
         except Exception as e:
             return ResponseBuilder.error("Failed to remove columns", str(e))
+
+    @staticmethod
+    async def get_user_table_schema(user_id: int) -> str:
+        try:
+            lines = ["User's Database Tables:"]
+            found = False
+
+            async for t in DynamicTableData.objects.filter(user_id=user_id).values("id", "table_name"):
+                found = True
+                try:
+                    jt = await JsonTable.objects.aget(table_id=t["id"])
+                    lines.append(f"- Table ID: {t['id']} | Name: {t['table_name']} | Columns: {jt.headers}")
+                except JsonTable.DoesNotExist:
+                    lines.append(f"- Table ID: {t['id']} | Name: {t['table_name']} | Columns: []")
+
+            if not found:
+                return "The user currently has no tables."
+
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Could not fetch schema: {str(e)}"

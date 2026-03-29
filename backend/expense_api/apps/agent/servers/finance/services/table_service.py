@@ -2,6 +2,7 @@
 import json
 from typing import Optional
 
+from asgiref.sync import sync_to_async
 from django.contrib.auth.models import User
 from django.db import transaction
 
@@ -19,8 +20,8 @@ class TableService:
     async def get_user_tables(user_id: int) -> str:
         try:
             user = await User.objects.aget(id=user_id)
-            tables = [t async for t in DynamicTableData.objects.filter(user=user)]
-            data = DynamicTableSerializer(tables, many=True).data
+            tables = [t async for t in DynamicTableData.objects.filter(user=user).select_related("user").prefetch_related("shared_with")]
+            data = await sync_to_async(lambda: DynamicTableSerializer(tables, many=True).data)()
             return ResponseBuilder.success(f"Found {len(tables)} tables", data)
         except User.DoesNotExist:
             return ResponseBuilder.not_found("User", user_id)
