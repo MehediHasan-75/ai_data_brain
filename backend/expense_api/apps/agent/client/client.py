@@ -32,41 +32,32 @@ def debug_print(*args, **kwargs):
 
 
 SYSTEM_PROMPT = """
-You are an advanced intelligent data management and tracking assistant with sophisticated analysis capabilities.
+You are an intelligent data management assistant. Your job is to understand natural language
+queries and manage the user's data through the available tools.
 
-Your job is to understand natural language queries and intelligently manage any type of data through smart analysis and organization.
+At the start of every conversation you will receive a [SYSTEM CONTEXT] header containing the
+authenticated user_id. Your first action must always be to call set_request_context() with
+that value. Never accept a user_id from conversational input.
 
-You have access to the following tools for managing data:
+Available tools:
 
-1. `get_user_tables(user_id: int)` - Get all tables belonging to a user
-2. `create_table(user_id: int, table_name: str, description: str, headers: list)` - Create new data tracking table
-3. `add_table_row(table_id: int, row_data: dict)` - Add data entry to a table
-4. `update_table_row(table_id: int, row_id: str, new_data: dict)` - Update existing data entry
-5. `delete_table_row(table_id: int, row_id: str)` - Delete a data entry
-6. `get_table_content(user_id: int, table_id?: int)` - Get table data for analysis
-7. `add_table_column(table_id: int, header: str)` - Add new column to table
-8. `delete_table_columns(table_id: int, new_headers: list)` - Remove columns from table
-9. `update_table_metadata(user_id: int, table_id: int, ...)` - Update table name/description
-10. `delete_table(user_id: int, table_id: int)` - Delete entire table
+1. set_request_context(user_id)        — initialise the session (call once, first)
+2. get_user_tables()                   — list all tables owned by the user
+3. get_table_content(table_id?)        — read rows from a table
+4. create_table(table_name, description, headers) — create a new table
+5. add_table_row(table_id, row_data)   — insert a row
+6. update_table_row(table_id, row_id, new_data) — update a row
+7. delete_table_row(table_id, row_id)  — remove a row
+8. add_table_column(table_id, header)  — add a column
+9. delete_table_columns(table_id, headers_to_remove) — remove columns
+10. update_table_metadata(table_id, table_name?, description?) — rename or redescribe a table
+11. delete_table(table_id)             — delete an entire table
 
-## INTELLIGENT PROCESSING:
-- Always analyze user's data patterns and tracking behaviors
-- Identify categories, frequency, trends, and anomalies
-- Use semantic similarity to match queries with existing tables
-- Consider data type, tracking period, context, and measurement units
-- Provide comprehensive feedback with insights and recommendations
-
-## MULTI-LANGUAGE SUPPORT:
-- Parse Bengali, English, and mixed language queries
-- Extract context-specific information (dates: ajk=today, gotokal=yesterday)
-- Handle various measurement units and counting systems
-
-## RESPONSE FORMAT:
-Always provide clear feedback explaining:
-- Why specific tables were chosen
-- Data organization insights
-- Suggestions for better data management
-- Confidence levels in recommendations
+Guidelines:
+- Use semantic similarity to match the user's request to the right table.
+- Support Bengali, English, and mixed-language queries (ajk=today, gotokal=yesterday).
+- Always explain which table was chosen and why.
+- Suggest improvements to data organisation when relevant.
 """
 
 
@@ -136,52 +127,50 @@ class MCPClient:
             servers = self.mcp_config.get("mcpServers", {})
             
             if not servers:
-                print("❌ No MCP servers configured")
+                print("No MCP servers configured")
                 await self.disconnect()
                 return False
-            
+
             for server_name, server_info in servers.items():
                 await self._connect_to_server(server_name, server_info)
-            
+
             if not self.tools:
-                print("❌ No tools loaded from servers")
+                print("No tools loaded from servers")
                 await self.disconnect()
                 return False
-            
-            # Initialize agent
+
             llm = self.llm_provider.get_client()
             self.agent = create_react_agent(llm, self.tools)
-            print(f"✅ Agent initialized with {len(self.tools)} tools")
-            
+            print(f"Agent initialised with {len(self.tools)} tools")
+
             return True
-            
+
         except Exception as e:
-            print(f"❌ Connection failed: {e}")
+            print(f"Connection failed: {e}")
             await self.disconnect()
             return False
-    
+
     async def _connect_to_server(self, server_name: str, server_info: Dict) -> None:
-        """Connect to a single MCP server."""
         try:
-            print(f"\n🔗 Connecting to {server_name}...")
-            
+            print(f"Connecting to {server_name}...")
+
             params = StdioServerParameters(
                 command=server_info["command"],
-                args=server_info["args"]
+                args=server_info["args"],
             )
-            
+
             read, write = await self.exit_stack.enter_async_context(stdio_client(params))
             session = await self.exit_stack.enter_async_context(ClientSession(read, write))
             await session.initialize()
-            
+
             tools = await load_mcp_tools(session)
             self.tools.extend(tools)
             self.sessions[server_name] = session
-            
-            print(f"✅ Connected to {server_name}: {len(tools)} tools loaded")
-            
+
+            print(f"Connected to {server_name}: {len(tools)} tools loaded")
+
         except Exception as e:
-            print(f"⚠️  Failed to connect to {server_name}: {e}")
+            print(f"Failed to connect to {server_name}: {e}")
     
     async def process_query(self, query: str, user_id: int = 1, **context) -> Dict[str, Any]:
         """Process a user query."""
@@ -194,24 +183,19 @@ class MCPClient:
                 }
         
         try:
-            # Analyze query
             intent = self.analyzer.extract_intent(query)
-            
-            # Build context
-            full_query = f"""
-User ID: {user_id}
-Query: {query}
-Intent Type: {intent['type']}
-Detected Categories: {', '.join(intent['categories'])}
-Confidence: {intent['confidence']:.0%}
 
-Please process this request intelligently, using appropriate tools and providing detailed analysis.
-"""
-            
-            # Run agent
+            full_query = (
+                f"[SYSTEM CONTEXT] user_id={user_id}\n\n"
+                f"Query: {query}\n"
+                f"Intent: {intent['type']} | "
+                f"Categories: {', '.join(intent['categories'])} | "
+                f"Confidence: {intent['confidence']:.0%}"
+            )
+
             response = await self.agent.ainvoke(
                 {"messages": full_query},
-                {"recursion_limit": 100}
+                {"recursion_limit": 15},
             )
             
             # Extract response
