@@ -39,7 +39,7 @@ class TableService:
 
             user = await User.objects.aget(id=user_id)
 
-            async with transaction.atomic():
+            async with transaction.aatomic():
                 table = await DynamicTableData.objects.acreate(
                     table_name=table_name.strip(),
                     description=description.strip() if description else "",

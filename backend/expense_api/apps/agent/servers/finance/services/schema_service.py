@@ -20,7 +20,7 @@ class SchemaService:
             if header in json_table.headers:
                 return ResponseBuilder.error("Column already exists", f"Header '{header}' already present")
 
-            async with transaction.atomic():
+            async with transaction.aatomic():
                 json_table.headers = json_table.headers + [header]
                 await json_table.asave()
                 async for row in json_table.rows.all():
@@ -45,7 +45,7 @@ class SchemaService:
 
             json_table = await JsonTable.objects.aget(pk=table_id)
 
-            async with transaction.atomic():
+            async with transaction.aatomic():
                 new_headers = [h for h in json_table.headers if h not in headers_to_remove]
                 json_table.headers = new_headers
                 await json_table.asave()
