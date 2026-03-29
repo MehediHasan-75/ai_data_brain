@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 
@@ -41,15 +42,16 @@ class AuthService:
     @staticmethod
     def set_auth_cookies(response, access_token, refresh_token):
         """Write both auth cookies onto an existing response object."""
+        secure = not settings.DEBUG
         response.set_cookie(
             'refresh_token', refresh_token,
             httponly=True, path='/', samesite='Lax',
-            secure=False, max_age=7 * 24 * 60 * 60,
+            secure=secure, max_age=7 * 24 * 60 * 60,
         )
         response.set_cookie(
             'access_token', access_token,
             httponly=True, path='/', samesite='Lax',
-            secure=False, max_age=60 * 60,
+            secure=secure, max_age=60 * 60,
         )
 
     @staticmethod
@@ -58,7 +60,7 @@ class AuthService:
         response.set_cookie(
             'access_token', access_token,
             httponly=True, path='/', samesite='Lax',
-            secure=False, max_age=60 * 60,
+            secure=not settings.DEBUG, max_age=60 * 60,
         )
 
     @staticmethod
@@ -130,7 +132,6 @@ class UserService:
         from .models import UserProfile
 
         UserProfile.objects.get_or_create_for_user(user)
-        user.refresh_from_db()
 
         added_by_me_ids = set(user.profile.friends.values_list('id', flat=True))
 
@@ -171,15 +172,17 @@ class UserService:
 
         UserProfile.objects.get_or_create_for_user(user)
         UserProfile.objects.get_or_create_for_user(friend)
-        user.refresh_from_db()
-        friend.refresh_from_db()
 
         if action == 'add':
-            if friend in user.profile.friends.all() or user in friend.profile.friends.all():
+            already_friends = (
+                user.profile.friends.filter(id=friend.id).exists()
+                or friend.profile.friends.filter(id=user.id).exists()
+            )
+            if already_friends:
                 raise AlreadyFriends("Already friends")
             user.profile.friends.add(friend)
         elif action == 'remove':
-            if friend not in user.profile.friends.all():
+            if not user.profile.friends.filter(id=friend.id).exists():
                 raise NotFriends("Cannot remove friend who added you")
             user.profile.friends.remove(friend)
         else:

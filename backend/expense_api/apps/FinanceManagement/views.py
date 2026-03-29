@@ -1,3 +1,5 @@
+import logging
+
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
@@ -6,7 +8,7 @@ from django.http import JsonResponse
 from ..user_auth.authentication import IsAuthenticatedCustom
 from ..user_auth.permission import JWTAuthentication
 
-from .models import DynamicTableData
+from .models import DynamicTableData, JsonTable
 from .serializers import DynamicTableSerializer
 from .services import TableService, RowService, ColumnService, SharingService
 from .exceptions import (
@@ -18,6 +20,8 @@ from .exceptions import (
     InvalidRowData,
     NotAFriend,
 )
+
+logger = logging.getLogger(__name__)
 
 
 class DynamicTableListView(APIView):
@@ -82,6 +86,9 @@ class GetTableContentView(APIView):
 
 
 class AddRowView(APIView):
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [IsAuthenticatedCustom]
+
     def post(self, request):
         table_id = request.data.get("tableId")
         new_row = request.data.get("row")
@@ -92,7 +99,7 @@ class AddRowView(APIView):
             }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            row = RowService.add_row(table_id, new_row)
+            row = RowService.add_row(request.user, table_id, new_row)
             return Response({
                 "message": "Row added successfully.",
                 "data": {"id": row.id, **new_row},
@@ -153,12 +160,10 @@ class AddColumnView(APIView):
             )
 
         try:
-            ColumnService.add_column(table_id, header)
-            from .models import JsonTable
-            json_table = JsonTable.objects.get(pk=table_id)
+            new_headers = ColumnService.add_column(request.user, table_id, header)
             return Response({
                 "message": "Column added successfully.",
-                "headers": json_table.headers,
+                "headers": new_headers,
             }, status=status.HTTP_200_OK)
         except TableNotFound as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -183,12 +188,10 @@ class DeleteColumnView(APIView):
             )
 
         try:
-            ColumnService.delete_column(table_id, header)
-            from .models import JsonTable
-            json_table = JsonTable.objects.get(pk=table_id)
+            new_headers = ColumnService.delete_column(request.user, table_id, header)
             return Response({
                 "message": f"Column '{header}' deleted successfully.",
-                "headers": json_table.headers,
+                "headers": new_headers,
             }, status=status.HTTP_200_OK)
         except TableNotFound as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -213,7 +216,7 @@ class DeleteRowView(APIView):
             )
 
         try:
-            RowService.delete_row(table_id, row_id)
+            RowService.delete_row(request.user, table_id, row_id)
             return Response({"message": "Row deleted successfully."}, status=status.HTTP_200_OK)
         except TableNotFound as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)
@@ -239,7 +242,7 @@ class UpdateTableView(APIView):
             )
 
         try:
-            row = RowService.update_row(table_id, row_id, new_row_data)
+            row = RowService.update_row(request.user, table_id, row_id, new_row_data)
             return JsonResponse({'status': 'success', 'updated_row': row.data})
         except (TableNotFound, RowNotFound) as e:
             return JsonResponse({'error': str(e)}, status=400)
@@ -282,12 +285,10 @@ class EditHeaderView(APIView):
             )
 
         try:
-            ColumnService.rename_column(table_id, old_header, new_header)
-            from .models import JsonTable
-            json_table = JsonTable.objects.get(table_id=table_id)
+            new_headers = ColumnService.rename_column(request.user, table_id, old_header, new_header)
             return Response({
                 "message": "Header updated successfully.",
-                "data": {"headers": json_table.headers},
+                "data": {"headers": new_headers},
             }, status=status.HTTP_200_OK)
         except TableNotFound as e:
             return Response({"error": str(e)}, status=status.HTTP_404_NOT_FOUND)

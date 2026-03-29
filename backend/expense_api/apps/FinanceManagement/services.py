@@ -47,23 +47,21 @@ class TableService:
         """Return a list of {id, data: {headers, rows}} for all accessible tables."""
         accessible = DynamicTableData.objects.filter(
             models.Q(user=user) | models.Q(shared_with=user)
-        )
+        ).prefetch_related('jsontable__rows').distinct()
+
         result = []
         for table_data in accessible:
             try:
-                json_table = JsonTable.objects.get(table=table_data)
-                result.append({
-                    "id": json_table.table.id,
-                    "data": {
-                        "headers": json_table.headers,
-                        "rows": [
-                            {"id": row.id, **row.data}
-                            for row in json_table.rows.all()
-                        ],
-                    },
-                })
+                jt = table_data.jsontable
             except JsonTable.DoesNotExist:
                 continue
+            result.append({
+                "id": table_data.id,
+                "data": {
+                    "headers": jt.headers,
+                    "rows": [{"id": row.id, **row.data} for row in jt.rows.all()],
+                },
+            })
         return result
 
     @classmethod
@@ -85,7 +83,6 @@ class TableService:
             table.description = kwargs['description']
             updated = True
         if 'pendingCount' in kwargs:
-            # Preserve original field name from the view (maps to pending_count)
             table.pendingCount = kwargs['pendingCount']
             updated = True
 
@@ -94,33 +91,27 @@ class TableService:
         return table, updated
 
     @classmethod
+    @transaction.atomic
     def delete_table(cls, user, table_id):
-        """Delete a table (and its JsonTable/rows) that the user owns."""
+        """Delete a table (and all related data via CASCADE) that the user owns."""
         try:
             table_data = DynamicTableData.objects.get(id=table_id, user=user)
         except DynamicTableData.DoesNotExist:
             raise TableNotFound("Table not found or you don't have permission to delete it.")
 
-        try:
-            json_table = JsonTable.objects.get(table=table_data)
-            json_table.rows.all().delete()
-            json_table.delete()
-        except JsonTable.DoesNotExist:
-            pass
-
         table_name = table_data.table_name
-        table_data.delete()
+        table_data.delete()  # CASCADE removes JsonTable and JsonTableRow
         return table_name
 
 
 class RowService:
     @classmethod
-    def add_row(cls, table_id, row_data):
-        """Add a row to a JsonTable. Raises InvalidRowData if keys don't match headers."""
+    def add_row(cls, user, table_id, row_data):
+        """Add a row to a JsonTable. Raises TableNotFound / InvalidRowData."""
         try:
-            json_table = JsonTable.objects.get(pk=table_id)
+            json_table = JsonTable.objects.get(pk=table_id, table__user=user)
         except JsonTable.DoesNotExist:
-            raise TableNotFound(f"Table {table_id} not found.")
+            raise TableNotFound(f"Table {table_id} not found or not owned by you.")
 
         if not all(key in json_table.headers for key in row_data.keys()):
             raise InvalidRowData(
@@ -130,12 +121,12 @@ class RowService:
         return JsonTableRow.objects.create(table=json_table, data=row_data)
 
     @classmethod
-    def update_row(cls, table_id, row_id, new_data):
+    def update_row(cls, user, table_id, row_id, new_data):
         """Update an existing row's data. Raises TableNotFound / RowNotFound."""
         try:
-            json_table = JsonTable.objects.get(pk=table_id)
+            json_table = JsonTable.objects.get(pk=table_id, table__user=user)
         except JsonTable.DoesNotExist:
-            raise TableNotFound(f"Table {table_id} not found.")
+            raise TableNotFound(f"Table {table_id} not found or not owned by you.")
 
         try:
             row = json_table.rows.get(data__id=row_id) if isinstance(row_id, str) else json_table.rows.get(pk=row_id)
@@ -147,12 +138,12 @@ class RowService:
         return row
 
     @classmethod
-    def delete_row(cls, table_id, row_id):
+    def delete_row(cls, user, table_id, row_id):
         """Delete a row. Raises TableNotFound / RowNotFound."""
         try:
-            json_table = JsonTable.objects.get(pk=table_id)
+            json_table = JsonTable.objects.get(pk=table_id, table__user=user)
         except JsonTable.DoesNotExist:
-            raise TableNotFound(f"Table {table_id} not found.")
+            raise TableNotFound(f"Table {table_id} not found or not owned by you.")
 
         try:
             row = json_table.rows.get(data__id=row_id) if isinstance(row_id, str) else json_table.rows.get(pk=row_id)
@@ -164,12 +155,12 @@ class RowService:
 class ColumnService:
     @classmethod
     @transaction.atomic
-    def add_column(cls, table_id, header):
-        """Add a new column and backfill existing rows with empty string."""
+    def add_column(cls, user, table_id, header):
+        """Add a new column and backfill existing rows with empty string. Returns new headers."""
         try:
-            json_table = JsonTable.objects.get(pk=table_id)
+            json_table = JsonTable.objects.get(pk=table_id, table__user=user)
         except JsonTable.DoesNotExist:
-            raise TableNotFound(f"Table {table_id} not found.")
+            raise TableNotFound(f"Table {table_id} not found or not owned by you.")
 
         if header in json_table.headers:
             raise DuplicateHeader(f"Header '{header}' already exists.")
@@ -177,18 +168,22 @@ class ColumnService:
         json_table.headers.append(header)
         json_table.save()
 
-        for row in json_table.rows.all():
+        rows = list(json_table.rows.all())
+        for row in rows:
             row.data[header] = ""
-            row.save()
+        if rows:
+            JsonTableRow.objects.bulk_update(rows, ['data'])
+
+        return json_table.headers
 
     @classmethod
     @transaction.atomic
-    def delete_column(cls, table_id, header):
-        """Remove a column from headers and strip its key from all rows."""
+    def delete_column(cls, user, table_id, header):
+        """Remove a column from headers and strip its key from all rows. Returns new headers."""
         try:
-            json_table = JsonTable.objects.get(pk=table_id)
+            json_table = JsonTable.objects.get(pk=table_id, table__user=user)
         except JsonTable.DoesNotExist:
-            raise TableNotFound(f"Table {table_id} not found.")
+            raise TableNotFound(f"Table {table_id} not found or not owned by you.")
 
         if header not in json_table.headers:
             raise FinanceException(f"Header '{header}' does not exist in the table.")
@@ -196,19 +191,22 @@ class ColumnService:
         json_table.headers.remove(header)
         json_table.save()
 
-        for row in json_table.rows.all():
-            if header in row.data:
-                del row.data[header]
-                row.save()
+        rows = list(json_table.rows.all())
+        for row in rows:
+            row.data.pop(header, None)
+        if rows:
+            JsonTableRow.objects.bulk_update(rows, ['data'])
+
+        return json_table.headers
 
     @classmethod
     @transaction.atomic
-    def rename_column(cls, table_id, old_header, new_header):
-        """Rename a column in headers + update all row keys via the manager."""
+    def rename_column(cls, user, table_id, old_header, new_header):
+        """Rename a column in headers + update all row keys via the manager. Returns new headers."""
         try:
-            json_table = JsonTable.objects.get(table_id=table_id)
+            json_table = JsonTable.objects.get(table_id=table_id, table__user=user)
         except JsonTable.DoesNotExist:
-            raise TableNotFound(f"Table {table_id} not found.")
+            raise TableNotFound(f"Table {table_id} not found or not owned by you.")
 
         if new_header in json_table.headers:
             raise DuplicateHeader(f"Header '{new_header}' already exists.")
@@ -218,6 +216,7 @@ class ColumnService:
         json_table.save()
 
         JsonTableRow.objects.bulk_rename_key(json_table, old_header, new_header)
+        return json_table.headers
 
 
 class SharingService:
@@ -232,7 +231,6 @@ class SharingService:
         if not friend_ids:
             raise FinanceException("friend_ids are required for sharing.")
 
-        # Build set of valid friend IDs (bidirectional)
         owner_friend_ids = set(
             owner.profile.friends.values_list('id', flat=True)
         ) if hasattr(owner, 'profile') else set()
@@ -241,15 +239,18 @@ class SharingService:
         )
         all_friend_ids = owner_friend_ids | friends_who_added_me_ids
 
+        # Fetch all candidate users in one query
+        candidate_users = {u.id: u for u in User.objects.filter(id__in=friend_ids)}
+        already_shared_ids = set(table.shared_with.values_list('id', flat=True))
+
         friends_to_add = []
         for fid in friend_ids:
-            try:
-                friend = User.objects.get(id=fid)
-            except User.DoesNotExist:
+            friend = candidate_users.get(fid)
+            if not friend:
                 continue
             if friend.id not in all_friend_ids:
                 raise NotAFriend(f"{friend.username} is not your friend.")
-            if not table.shared_with.filter(id=friend.id).exists():
+            if friend.id not in already_shared_ids:
                 friends_to_add.append(friend)
 
         if friends_to_add:

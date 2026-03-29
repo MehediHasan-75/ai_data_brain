@@ -1,6 +1,9 @@
-from rest_framework import generics, status
-from rest_framework.views import APIView
+import logging
+
+from rest_framework import status
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from django.contrib.auth.models import User
 
 from .authentication import IsAuthenticatedCustom, decode_refresh_token
@@ -19,12 +22,14 @@ from .exceptions import (
     UserAuthException,
 )
 
+logger = logging.getLogger(__name__)
+
 
 class UserRegisterView(APIView):
     def post(self, request):
         user, errors = AuthService.register(request.data)
         if errors:
-            return Response(errors, status=400)
+            return Response(errors, status=status.HTTP_400_BAD_REQUEST)
         access_token, refresh_token = AuthService.generate_tokens(user)
         response = Response({
             'message': "User registered successfully.",
@@ -40,10 +45,14 @@ class UserListView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticatedCustom]
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         try:
-            serializer = UserSerializer(User.objects.all(), many=True)
-            return Response(serializer.data)
+            search = request.query_params.get('search', '')
+            qs = User.objects.filter(username__icontains=search).exclude(id=request.user.id)
+            paginator = PageNumberPagination()
+            paginator.page_size = 20
+            page = paginator.paginate_queryset(qs, request)
+            return paginator.get_paginated_response(UserSerializer(page, many=True).data)
         except Exception as e:
             return Response(
                 {"error": "An error occurred while fetching user data.", "details": str(e)},
@@ -51,7 +60,7 @@ class UserListView(APIView):
             )
 
 
-class loginView(APIView):
+class LoginView(APIView):
     def post(self, request):
         try:
             user = AuthService.login(
@@ -59,7 +68,7 @@ class loginView(APIView):
                 request.data.get('password'),
             )
         except InvalidCredentials:
-            return Response({'message': "Invalid credentials."})
+            return Response({'message': "Invalid credentials."}, status=status.HTTP_401_UNAUTHORIZED)
 
         access_token, refresh_token = AuthService.generate_tokens(user)
         response = Response({
@@ -72,18 +81,17 @@ class loginView(APIView):
         return response
 
 
-class logoutView(APIView):
+class LogoutView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticatedCustom]
 
     def post(self, request):
-        print('logoutView')
         response = Response({'message': 'Logged out successfully'})
         AuthService.clear_auth_cookies(response)
         return response
 
 
-class UserDetailView(generics.RetrieveUpdateDestroyAPIView):
+class UserDetailView(APIView):
     authentication_classes = [JWTAuthentication]
     permission_classes = [IsAuthenticatedCustom]
 
@@ -104,12 +112,8 @@ class UpdateUserDetails(APIView):
 
     def post(self, request):
         try:
-            user = UserService.get_user_by_email_or_username(
-                email=request.data.get('email'),
-                username=request.data.get('username'),
-            )
             UserService.update_details(
-                user,
+                request.user,
                 request.data.get('password'),
                 request.data.get('newpassword'),
                 request.data.get('newpassword2'),
@@ -117,15 +121,13 @@ class UpdateUserDetails(APIView):
             return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
         except UserAuthException as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except UserNotFound as e:
-            return Response({"message": str(e)}, status=status.HTTP_404_NOT_FOUND)
         except PasswordMismatch as e:
             return Response({"message": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except WrongCurrentPassword as e:
             return Response({"message": str(e)}, status=status.HTTP_401_UNAUTHORIZED)
 
 
-class UdateAccessToken(APIView):
+class UpdateAccessToken(APIView):
     authentication_classes = []
     permission_classes = []
 
@@ -201,7 +203,7 @@ class FriendsListView(APIView):
                 "data": friends_data,
             }, status=status.HTTP_200_OK)
         except Exception as e:
-            print(f"Error in FriendsListView: {str(e)}")
+            logger.error("FriendsListView error: %s", e)
             return Response({
                 "error": "Failed to fetch friends list",
                 "details": str(e),
@@ -233,7 +235,7 @@ class ManageFriendView(APIView):
         except UserAuthException as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
-            print(f"Error in ManageFriendView: {str(e)}")
+            logger.error("ManageFriendView error: %s", e)
             return Response({
                 "error": "Failed to manage friend",
                 "details": str(e),

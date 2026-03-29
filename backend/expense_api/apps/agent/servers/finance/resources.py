@@ -1,11 +1,5 @@
 """MCP resource definitions for finance management."""
 
-import os
-import django
-
-os.environ.setdefault("DJANGO_SETTINGS_MODULE", "expense_api.settings")
-django.setup()
-
 from .mcp_instance import mcp
 from .services import SchemaService
 

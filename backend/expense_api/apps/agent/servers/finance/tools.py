@@ -18,7 +18,7 @@ async def get_user_tables(user_id: Annotated[int, Field(exclude=True)] = 1) -> s
 
 
 @mcp.tool(
-    name="create_table",
+name="create_table",
     description="Create a new table with the given name, description, and column headers."
 )
 async def create_table(
