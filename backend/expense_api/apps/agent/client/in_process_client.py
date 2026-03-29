@@ -6,8 +6,9 @@ Each tool method on FinanceToolsManager is wrapped as a LangChain tool
 and handed to a LangGraph ReAct agent. The agent singleton is created
 once on first use and reused across all requests.
 
-User identity is resolved through the ContextVar in finance_mcp_server —
-set_current_user() must be called before ainvoke() on every request.
+User identity is resolved through set_current_user(), which is called
+programmatically by run_query()/stream_query() before the agent is invoked.
+The LLM never sees or controls the user_id — it is not in the tool list.
 """
 
 import os
@@ -26,14 +27,8 @@ def set_current_user(user_id: int) -> None:
 
 
 # Tool definitions — thin async wrappers around FinanceToolsManager methods.
-# Names must match what SYSTEM_PROMPT documents.
-
-@tool
-async def set_request_context(user_id: int) -> str:
-    """Bind the authenticated user to this session. Call once before any data tool."""
-    _current_user_id.set(user_id)
-    return f"Context initialised for user {user_id}"
-
+# NOTE: set_request_context is intentionally excluded — user identity is
+# injected programmatically via set_current_user() before the agent runs.
 
 @tool
 async def get_user_tables() -> str:
@@ -103,7 +98,6 @@ async def delete_table(table_id: int) -> str:
 
 
 TOOLS = [
-    set_request_context,
     get_user_tables,
     get_table_content,
     create_table,
