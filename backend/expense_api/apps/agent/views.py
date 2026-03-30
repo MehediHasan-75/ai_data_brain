@@ -1,3 +1,4 @@
+import os
 import re
 import json
 
@@ -20,6 +21,23 @@ from .serializers import (
 from .models import ChatSession, ChatMessage
 from .client import run_query, stream_query
 from .prompts import REGISTRY as PROMPT_REGISTRY
+
+
+_PROVIDER_KEY_MAP = {
+    "anthropic": "ANTHROPIC_API_KEY",
+    "google": "GOOGLE_API_KEY",
+    "deepseek": "DEEPSEEK_API_KEY",
+}
+
+def _check_llm_available(provider: str):
+    """Return an error Response if the required API key is missing, else None."""
+    key_name = _PROVIDER_KEY_MAP.get(provider, "ANTHROPIC_API_KEY")
+    if not os.environ.get(key_name):
+        return Response(
+            {"error": "AI chat is currently unavailable. The service has not been configured yet."},
+            status=status.HTTP_503_SERVICE_UNAVAILABLE,
+        )
+    return None
 
 
 def _clean_response(response_obj: dict) -> dict:
@@ -48,6 +66,10 @@ class AgentAPIView(APIView):
         llm_provider = data.get("llm_provider", "anthropic")
         llm_model = data.get("llm_model", "claude-sonnet-4-6")
 
+        err = _check_llm_available(llm_provider)
+        if err:
+            return err
+
         result = await run_query(query, request.user.id, llm_provider, llm_model)
         return Response(_clean_response(result), status=status.HTTP_200_OK)
 
@@ -70,6 +92,10 @@ class AgentStreamingAPIView(APIView):
         llm_provider = data.get("llm_provider", "anthropic")
         llm_model = data.get("llm_model", "claude-sonnet-4-6")
         user_id = request.user.id
+
+        err = _check_llm_available(llm_provider)
+        if err:
+            return err
 
         async def event_generator():
             async for event in stream_query(query, user_id, llm_provider, llm_model):
@@ -256,6 +282,10 @@ class PromptInvokeView(APIView):
 
         llm_provider = request.data.get("llm_provider", "anthropic")
         llm_model = request.data.get("llm_model", "claude-sonnet-4-6")
+
+        err = _check_llm_available(llm_provider)
+        if err:
+            return err
 
         result = await run_query(query, request.user.id, llm_provider, llm_model)
         return Response(_clean_response(result), status=status.HTTP_200_OK)
