@@ -113,38 +113,35 @@ The `onFinish` callback in `ChatContainer` calls `queryClient.invalidateQueries(
 
 ```mermaid
 flowchart TD
-    subgraph Browser["Browser (Next.js 15)"]
-        LP["Landing Page"]
-        CHAT["/chat (dashboard)"]
-        USERS["/users"]
-
-        LP & CHAT & USERS --> TSQ["TanStack Query (server state) + Zustand uiStore (UI state)"]
-        TSQ --> BFF["Next.js Route Handlers (BFF)  /api/*\nauth/ · tables/ · users/ · chat/stream · notifications/"]
+    subgraph Browser["Browser — Next.js 15"]
+        PAGES["Landing Page · /chat · /users"]
+        STATE["TanStack Query + Zustand uiStore"]
+        BFF["Next.js BFF — /api/auth · /api/tables · /api/users · /api/chat/stream"]
+        PAGES --> STATE --> BFF
     end
 
     BFF -->|"HTTP + HttpOnly cookie forwarding"| DJANGO
 
     subgraph DJANGO["Django + DRF"]
-        AUTH["user_auth app\n/auth/*"]
-        FINANCE["FinanceManagement\n/main/*"]
-        AGENT_APP["agent app\n/agent/*"]
-
-        AGENT_APP --> REACT["LangGraph ReAct Agent\n(run_query / stream_query)"]
+        AUTH["user_auth  /auth/*"]
+        MAIN["FinanceManagement  /main/*"]
+        AGENT["agent app  /agent/*"]
+        AGENT --> REACT["LangGraph ReAct Agent  —  run_query / stream_query"]
     end
 
-    REACT -->|"MCP tool calls"| MCP
+    REACT -->|"MCP tool calls"| FASTMCP
 
-    subgraph MCP["FastMCP Finance Server"]
-        TOOLS["tools.py (10 tools)  ·  resources.py (schema)  ·  prompts.py"]
-        SERVICES["TableService · RowService · ColumnService · QueryService"]
+    subgraph FASTMCP["FastMCP Finance Server"]
+        TOOLS["tools.py  ·  resources.py  ·  prompts.py"]
+        SVC["TableService  ·  RowService  ·  ColumnService  ·  QueryService"]
         BRIDGE["sync_to_async bridge"]
-        TOOLS --> SERVICES --> BRIDGE
+        TOOLS --> SVC --> BRIDGE
     end
 
     BRIDGE -->|"ORM queries"| DB
 
     subgraph DB["SQLite / PostgreSQL"]
-        MODELS["DynamicTableData · JsonTable · JsonTableRow\nChatSession · ChatMessage · UserProfile"]
+        MODELS["DynamicTableData  ·  JsonTable  ·  JsonTableRow  ·  ChatSession  ·  UserProfile"]
     end
 ```
 
