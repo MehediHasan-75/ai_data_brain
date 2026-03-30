@@ -7,10 +7,10 @@ import axios, {
   AxiosRequestConfig,
   RawAxiosRequestHeaders,
 } from "axios";
-import { getCSRFToken } from "@/utils/csrf";
 import { TableRow, TableData } from "@/data/TableContent";
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+// BFF proxy — all requests go through Next.js route handlers
+const API_BASE_URL = "/api";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -48,19 +48,15 @@ interface ShareTablePayload {
 }
 
 interface ShareTableResponse {
-  success: boolean;
-  data?: {
-    table: {
+  table: {
+    id: number;
+    table_name: string;
+    is_shared: boolean;
+    shared_with: Array<{
       id: number;
-      table_name: string;
-      is_shared: boolean;
-      shared_with: Array<{
-        id: number;
-        username: string;
-      }>;
-    };
+      username: string;
+    }>;
   };
-  error?: string;
 }
 
 // Create axios instance with base configuration
@@ -112,7 +108,7 @@ apiClient.interceptors.response.use(
 
       try {
         // Refresh the token
-        await apiClient.get("/auth/updateAcessToken/");
+        await apiClient.get("/auth/refresh");
         processQueue(null);
         return apiClient(originalRequest); // Retry original request
       } catch (refreshError) {
@@ -132,25 +128,6 @@ apiClient.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error);
-  }
-);
-
-// Add CSRF token to requests
-apiClient.interceptors.request.use(
-  (config) => {
-    const csrfSafeMethod = /^(GET|HEAD|OPTIONS|TRACE)$/i;
-
-    if (!csrfSafeMethod.test(config.method || "")) {
-      const token = getCSRFToken();
-      if (token) {
-        config.headers["X-CSRFToken"] = token;
-      }
-    }
-
-    return config;
-  },
-  (error) => {
     return Promise.reject(error);
   }
 );

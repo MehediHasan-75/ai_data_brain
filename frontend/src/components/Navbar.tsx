@@ -2,16 +2,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import { LuSunDim } from "react-icons/lu";
-import { HiMoon } from "react-icons/hi2";
-import {
-  HiMenu,
-  HiX,
-  HiLogout,
-  HiUser,
-  HiCog,
-  HiUserGroup,
-  HiChat,
-} from "react-icons/hi";
+import { HiMoon, HiMenu, HiX, HiLogout, HiUser, HiCog, HiUserGroup, HiChat } from "react-icons/hi";
 import { useTheme } from "@/context/ThemeProvider";
 import { useUser } from "@/context/AuthProvider";
 import { useRouter, usePathname } from "next/navigation";
@@ -36,295 +27,209 @@ const Navbar = ({ isOpen, setIsOpen }: SideBarProps) => {
     setShowUserMenu(false);
   };
 
-  const handleFriendsClick = () => {
-    router.push("/users");
-  };
-
-  const handleChatClick = () => {
-    router.push("/chat");
-  };
+  const iconBtnClass = `p-2 rounded-md transition-colors ${
+    theme === "dark"
+      ? "text-gray-300 hover:bg-gray-800 hover:text-white"
+      : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+  }`;
 
   return (
     <>
       <nav
-        className={`fixed top-0 left-0 w-full flex justify-between items-center h-16 md:h-20 px-4 sm:px-6 lg:px-8 z-[1010] transition-all duration-500 ease-in-out ${
+        className={`fixed top-0 left-0 w-full flex justify-between items-center h-16 px-4 sm:px-6 lg:px-8 z-[1010] border-b ${
           theme === "dark"
-            ? "bg-gray-900/95 backdrop-blur-sm border-gray-800"
-            : "bg-white/95 backdrop-blur-sm border-gray-200"
-        } border-b shadow-lg`}
+            ? "bg-gray-900 border-gray-800"
+            : "bg-white border-gray-200"
+        }`}
       >
-        {/* When sidebar is open, show toggle button first */}
         {isOpen ? (
-          <div className="flex justify-between">
+          <div className="flex items-center gap-3">
             <div
               onClick={() => router.push("/")}
-              className={`mr-12 w-32 md:w-40 lg:w-48 transition-all duration-500 ease-in-out hover:scale-105 cursor-pointer ${
-                isOpen ? "mx-auto" : ""
-              } flex items-center`}
+              className="flex items-center cursor-pointer"
             >
-              {/* Image wrapper: parent must be relative with explicit size for Image fill to work */}
-              <div className="relative h-12 md:h-10 lg:h-12 w-12 md:w-10 lg:w-12 shrink-0">
+              <div className="relative h-8 w-8 shrink-0">
                 <Image
-                  src={
-                    theme == "dark"
-                      ? "/databrain_logo.png"
-                      : "/databrain_log.png"
-                  }
+                  src={theme === "dark" ? "/databrain_logo.png" : "/databrain_log.png"}
                   alt="Logo"
-                  fill={true}
-                  className="object-contain transition-opacity duration-500"
+                  fill
+                  className="object-contain"
                   priority
                 />
               </div>
-
-              <div
-                className={`ml-2 hidden md:inline-block text-2xl font-bold transition-colors duration-500 ease-in-out bg-clip-text text-transparent ${
-                  theme === "dark"
-                    ? "bg-linear-to-r from-purple-400 via-pink-500 to-red-500"
-                    : "bg-linear-to-r from-blue-400 via-green-400 to-yellow-400"
+              <span
+                className={`ml-2 hidden md:inline-block text-base font-semibold ${
+                  theme === "dark" ? "text-white" : "text-gray-900"
                 }`}
               >
                 {process.env.NEXT_PUBLIC_APP_NAME || "DataBrain.AI"}
-              </div>
+              </span>
             </div>
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className={`ml-12 p-2 rounded-lg transition-all duration-500 ease-in-out lg:hidden ${
-                theme === "dark"
-                  ? "bg-gray-800/80 text-white hover:bg-gray-700 hover:scale-105"
-                  : "bg-gray-50/80 text-gray-900 hover:bg-gray-100 hover:scale-105"
-              } shadow-lg border ${
-                theme === "dark" ? "border-gray-700" : "border-gray-200"
-              }`}
-              aria-label="Toggle menu"
+              className={`${iconBtnClass} lg:hidden`}
+              aria-label="Close menu"
             >
-              <HiX
-                size={22}
-                className="transition-all duration-500 ease-in-out"
-              />
+              <HiX size={20} />
             </button>
           </div>
         ) : (
-          <div className="flex">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setIsOpen(!isOpen)}
-              className={`p-2 rounded-lg transition-all duration-500 ease-in-out lg:hidden ${
-                theme === "dark"
-                  ? "bg-gray-800/80 text-white hover:bg-gray-700 hover:scale-105"
-                  : "bg-gray-50/80 text-gray-900 hover:bg-gray-100 hover:scale-105"
-              } shadow-lg border ${
-                theme === "dark" ? "border-gray-700" : "border-gray-200"
-              }`}
-              aria-label="Toggle menu"
+              className={`${iconBtnClass} lg:hidden`}
+              aria-label="Open menu"
             >
-              <HiMenu
-                size={22}
-                className="transition-all duration-500 ease-in-out"
-              />
+              <HiMenu size={20} />
             </button>
-
             <div
               onClick={() => router.push("/")}
-              className={`w-32 md:w-40 lg:w-48 transition-all duration-500 ease-in-out hover:scale-105 cursor-pointer ${
-                isOpen ? "mx-auto" : ""
-              } flex items-center`}
+              className="flex items-center cursor-pointer"
             >
-              <div className="relative h-12 md:h-10 lg:h-12 w-12 md:w-10 lg:w-12 shrink-0">
+              <div className="relative h-8 w-8 shrink-0">
                 <Image
-                  src={
-                    theme == "dark"
-                      ? "/databrain_logo.png"
-                      : "/databrain_log.png"
-                  }
+                  src={theme === "dark" ? "/databrain_logo.png" : "/databrain_log.png"}
                   alt="Logo"
-                  fill={true}
-                  className="object-contain transition-opacity duration-500"
+                  fill
+                  className="object-contain"
                   priority
                 />
               </div>
-
-              <div
-                className={`ml-2 hidden md:inline-block text-lg font-bold transition-colors duration-500 ease-in-out bg-clip-text text-transparent ${
-                  theme === "dark"
-                    ? "bg-linear-to-r from-purple-400 via-pink-500 to-red-500"
-                    : "bg-linear-to-r from-blue-400 via-green-400 to-yellow-400"
+              <span
+                className={`ml-2 hidden md:inline-block text-base font-semibold ${
+                  theme === "dark" ? "text-white" : "text-gray-900"
                 }`}
               >
                 {process.env.NEXT_PUBLIC_APP_NAME || "DataBrain.AI"}
-              </div>
+              </span>
             </div>
           </div>
         )}
 
-        <div className="flex items-center space-x-2 md:space-x-4">
-          {/* Chat Button */}
+        <div className="flex items-center gap-1">
           {pathname !== "/chat" && (
             <button
-              onClick={handleChatClick}
-              className={`p-2 rounded-full transition-all duration-500 ease-in-out ${
-                theme === "dark"
-                  ? "bg-gray-700/80 text-white hover:bg-gray-600 hover:scale-110"
-                  : "bg-gray-100/80 text-gray-900 hover:bg-gray-200 hover:scale-110"
-              } shadow-lg flex items-center justify-center`}
+              onClick={() => router.push("/chat")}
+              className={iconBtnClass}
               aria-label="Chat"
             >
-              <HiChat
-                size={20}
-                className="transition-all duration-500 ease-in-out hover:rotate-12"
-              />
+              <HiChat size={18} />
             </button>
           )}
 
-          {/* Friends Button */}
           {pathname !== "/users" && (
             <button
-              onClick={handleFriendsClick}
-              className={`p-2 rounded-full transition-all duration-500 ease-in-out ${
-                theme === "dark"
-                  ? "bg-gray-700/80 text-white hover:bg-gray-600 hover:scale-110"
-                  : "bg-gray-100/80 text-gray-900 hover:bg-gray-200 hover:scale-110"
-              } shadow-lg flex items-center justify-center`}
+              onClick={() => router.push("/users")}
+              className={iconBtnClass}
               aria-label="Friends"
             >
-              <HiUserGroup
-                size={20}
-                className="transition-all duration-500 ease-in-out hover:rotate-12"
-              />
+              <HiUserGroup size={18} />
             </button>
           )}
 
-          {/* Theme Toggle */}
           <button
             onClick={() => toggleTheme()}
-            className={`p-2 rounded-full transition-all duration-500 ease-in-out ${
-              theme === "dark"
-                ? "bg-gray-700/80 text-amber-300 hover:bg-gray-600 hover:scale-110"
-                : "bg-gray-100/80 text-indigo-600 hover:bg-gray-200 hover:scale-110"
-            } shadow-lg flex items-center justify-center`}
+            className={iconBtnClass}
             aria-label="Toggle theme"
           >
             {theme === "dark" ? (
-              <LuSunDim
-                size={20}
-                className="transition-all duration-500 ease-in-out hover:rotate-45"
-              />
+              <LuSunDim size={18} />
             ) : (
-              <HiMoon
-                size={20}
-                className="transition-all duration-500 ease-in-out hover:-rotate-45"
-              />
+              <HiMoon size={18} />
             )}
           </button>
 
-          {/* User Menu */}
           {user && (
             <div className="relative">
               <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className={`flex items-center space-x-2 p-2 rounded-lg transition-all duration-500 ease-in-out ${
+                className={`flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors ${
                   theme === "dark"
-                    ? "bg-gray-700/80 text-white hover:bg-gray-600 hover:scale-105"
-                    : "bg-gray-100/80 text-gray-900 hover:bg-gray-200 hover:scale-105"
-                } shadow-lg border ${
-                  theme === "dark" ? "border-gray-600" : "border-gray-200"
+                    ? "text-gray-300 hover:bg-gray-800 hover:text-white"
+                    : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
                 }`}
                 aria-label="User menu"
               >
-                <HiUser
-                  size={18}
-                  className="transition-all duration-500 ease-in-out"
-                />
-                <span className="hidden sm:block text-sm font-medium transition-all duration-500 ease-in-out">
+                <HiUser size={16} />
+                <span className="hidden sm:block font-medium">
                   {user.name || user.username}
                 </span>
               </button>
 
-              {/* User Dropdown Menu */}
               {showUserMenu && (
                 <div
-                  className={`absolute right-0 mt-2 w-48 rounded-lg shadow-xl transition-all duration-500 ease-in-out transform origin-top-right ${
+                  className={`absolute right-0 mt-1 w-48 rounded-md shadow-lg border py-1 z-50 ${
                     theme === "dark"
-                      ? "bg-gray-800/95 backdrop-blur-sm border-gray-700"
-                      : "bg-white/95 backdrop-blur-sm border-gray-200"
-                  } border z-50`}
+                      ? "bg-gray-900 border-gray-700"
+                      : "bg-white border-gray-200"
+                  }`}
                 >
-                  <div className="py-1">
-                    {/* User Info */}
-                    <div
-                      className={`px-4 py-3 border-b transition-colors duration-500 ease-in-out ${
-                        theme === "dark" ? "border-gray-700" : "border-gray-200"
+                  <div
+                    className={`px-4 py-2.5 border-b ${
+                      theme === "dark" ? "border-gray-700" : "border-gray-100"
+                    }`}
+                  >
+                    <p
+                      className={`text-sm font-medium ${
+                        theme === "dark" ? "text-white" : "text-gray-900"
                       }`}
                     >
-                      <p
-                        className={`text-sm font-medium transition-colors duration-500 ease-in-out ${
-                          theme === "dark" ? "text-white" : "text-gray-900"
-                        }`}
-                      >
-                        {user.name || user.username}
-                      </p>
-                      <p
-                        className={`text-xs transition-colors duration-500 ease-in-out ${
-                          theme === "dark" ? "text-gray-400" : "text-gray-600"
-                        }`}
-                      >
-                        {user.email}
-                      </p>
-                    </div>
-
-                    {/* Settings */}
-                    <button
-                      onClick={() => {
-                        setShowSettingsModal(true);
-                        setShowUserMenu(false);
-                      }}
-                      className={`w-full flex items-center px-4 py-2 text-sm transition-all duration-500 ease-in-out ${
-                        theme === "dark"
-                          ? "text-gray-300 hover:bg-gray-700 hover:text-white"
-                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
+                      {user.name || user.username}
+                    </p>
+                    <p
+                      className={`text-xs mt-0.5 ${
+                        theme === "dark" ? "text-gray-400" : "text-gray-500"
                       }`}
                     >
-                      <HiCog className="mr-3 h-4 w-4 transition-transform duration-500 ease-in-out hover:rotate-45" />
-                      Settings
-                    </button>
-
-                    {/* Sign Out */}
-                    <button
-                      onClick={handleSignOut}
-                      className={`w-full flex items-center px-4 py-2 text-sm transition-all duration-500 ease-in-out ${
-                        theme === "dark"
-                          ? "text-gray-300 hover:bg-gray-700 hover:text-white"
-                          : "text-gray-700 hover:bg-gray-100 hover:text-gray-900"
-                      }`}
-                    >
-                      <HiLogout className="mr-3 h-4 w-4 transition-transform duration-500 ease-in-out hover:rotate-12" />
-                      Sign Out
-                    </button>
+                      {user.email}
+                    </p>
                   </div>
+
+                  <button
+                    onClick={() => {
+                      setShowSettingsModal(true);
+                      setShowUserMenu(false);
+                    }}
+                    className={`w-full flex items-center px-4 py-2 text-sm transition-colors ${
+                      theme === "dark"
+                        ? "text-gray-300 hover:bg-gray-800 hover:text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <HiCog className="mr-3 h-4 w-4" />
+                    Settings
+                  </button>
+
+                  <button
+                    onClick={handleSignOut}
+                    className={`w-full flex items-center px-4 py-2 text-sm transition-colors ${
+                      theme === "dark"
+                        ? "text-gray-300 hover:bg-gray-800 hover:text-white"
+                        : "text-gray-700 hover:bg-gray-50"
+                    }`}
+                  >
+                    <HiLogout className="mr-3 h-4 w-4" />
+                    Sign Out
+                  </button>
                 </div>
               )}
             </div>
           )}
         </div>
 
-        {/* Click outside to close user menu */}
         {showUserMenu && (
           <div
-            className="fixed inset-0 z-40 transition-opacity duration-500 ease-in-out"
+            className="fixed inset-0 z-40"
             onClick={() => setShowUserMenu(false)}
           />
         )}
       </nav>
 
-      {/* Settings Modal */}
       {typeof window !== "undefined" &&
         createPortal(
           <SettingsModal
             isOpen={showSettingsModal}
-            onClose={() => {
-              setTimeout(() => {
-                setShowSettingsModal(false);
-              }, 300);
-            }}
+            onClose={() => setShowSettingsModal(false)}
           />,
           document.body
         )}

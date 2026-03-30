@@ -10,7 +10,7 @@ interface TablesDataContextType {
   getTableData: (tableId: number | null) => TableDataType[];
 }
 
-const initialTablesData: TableDataType[] = getTableData("1");
+const initialTablesData: TableDataType[] = getTableData("1") as unknown as TableDataType[];
 
 export const TablesDataContext = createContext<TablesDataContextType | null>(null);
 

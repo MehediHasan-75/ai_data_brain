@@ -305,4 +305,3 @@ const getTableData = (user_id: TableDataType["user_id"]) => {
 };
 
 export { getTableData };
-export type { TableDataType };

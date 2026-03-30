@@ -1,10 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios, { AxiosError } from "axios";
-import { getCSRFToken } from "@/utils/csrf";
 
-// Set base URL for the backend
-const BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000"; // Replace with your actual backend URL
+// BFF proxy — all requests go through Next.js route handlers
+const BASE_URL = "/api";
 
 // Enable credentials (cookies like access_token and refresh_token)
 const axiosInstance = axios.create({
@@ -13,20 +11,6 @@ const axiosInstance = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-});
-
-axiosInstance.interceptors.request.use((config) => {
-  // Only add CSRF header to unsafe methods
-  const csrfSafeMethod = /^(GET|HEAD|OPTIONS|TRACE)$/i;
-
-  if (!csrfSafeMethod.test(config.method || "")) {
-    const token = getCSRFToken();
-    if (token) {
-      config.headers["X-CSRFToken"] = token;
-    }
-  }
-
-  return config;
 });
 
 let isRefreshing = false;
@@ -65,7 +49,7 @@ axiosInstance.interceptors.response.use(
 
       try {
         // Refresh the token
-        await axiosInstance.get("/auth/updateAcessToken/");
+        await axiosInstance.get("/auth/refresh");
         processQueue(null);
         return axiosInstance(originalRequest); // Retry original request
       } catch (refreshError) {

@@ -1,4 +1,4 @@
-import { TableRow, TableData, JsonTableItem } from "../data/TableContent";
+import { TableRow, JsonTableItem } from "../data/TableContent";
 
 export interface CreateTablePayload {
   table_name: string;
@@ -79,11 +79,13 @@ export function jsonTableReducer(
       return [...action.payload];
     }
     case "ADD_TABLE": {
+      const p = action.payload;
+      if (!("id" in p)) return state; // CreateTablePayload — API response not yet available
       return [
         ...state,
         {
-          id: action.payload.id,
-          data: action.payload.data,
+          id: (p as JsonTableItem).id,
+          data: (p as JsonTableItem).data,
         },
       ];
     }

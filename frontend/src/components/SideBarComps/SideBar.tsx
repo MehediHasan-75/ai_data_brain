@@ -49,23 +49,6 @@ const SideBar = ({ isOpen, setIsOpen }: SideBarProps) => {
     //   },
     // });
   };
-  const handleTableShare = async (id: number) => {
-    await handleTableOperation(
-      {
-        type: "SHARE",
-        payload: {
-          id: id,
-        },
-      },
-      dispatchTablesData
-    );
-    // dispatchTablesData({
-    //   type: "SHARE",
-    //   payload: {
-    //     id: id,
-    //   },
-    // });
-  };
   const handleTableDelete = async (id: number) => {
     await handleTableOperation(
       {
@@ -131,7 +114,6 @@ const SideBar = ({ isOpen, setIsOpen }: SideBarProps) => {
                 table={table}
                 onEdit={handleTableEdit}
                 onDelete={handleTableDelete}
-                onShare={handleTableShare}
               />
             ))}
           </div>

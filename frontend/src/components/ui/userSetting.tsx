@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useTheme } from '@/context/ThemeProvider';
 import clsx from 'clsx';
 import { DialogClose } from '@/components/ui/dialog';
 import { XIcon } from 'lucide-react';
@@ -13,7 +12,6 @@ const settingsOptions = [
 ];
 
 const UserSettings = () => {
-  const { theme, toggleTheme } = useTheme();
   const [settings, setSettings] = useState({
     notifications: true,
     autoSave: false,

@@ -5,9 +5,8 @@ import axios, {
   AxiosRequestConfig,
   RawAxiosRequestHeaders,
 } from "axios";
-import { getCSRFToken } from "@/utils/csrf";
-
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+// BFF proxy — all requests go through Next.js route handlers
+const API_BASE_URL = "/api";
 
 interface ApiResponse<T> {
   success: boolean;
@@ -84,7 +83,7 @@ apiClient.interceptors.response.use(
       isRefreshing = true;
 
       try {
-        await apiClient.get("/auth/updateAcessToken/");
+        await apiClient.get("/auth/refresh");
         processQueue(null);
         return apiClient(originalRequest);
       } catch (refreshError) {
@@ -104,31 +103,6 @@ apiClient.interceptors.response.use(
       }
     }
 
-    return Promise.reject(error);
-  }
-);
-
-// Add CSRF token to requests
-apiClient.interceptors.request.use(
-  (config) => {
-    const csrfSafeMethod = /^(GET|HEAD|OPTIONS|TRACE)$/i;
-
-    if (!csrfSafeMethod.test(config.method || "")) {
-      const token = getCSRFToken();
-      if (token) {
-        config.headers["X-CSRFToken"] = token;
-      }
-    }
-
-    // Add auth token if available
-    const authToken = localStorage.getItem("auth_token");
-    if (authToken) {
-      config.headers.Authorization = `Bearer ${authToken}`;
-    }
-
-    return config;
-  },
-  (error) => {
     return Promise.reject(error);
   }
 );
@@ -355,7 +329,7 @@ export const chatApi = {
             response: string;
             tools_called: Array<{
               name: string;
-              args: Record<string, any>;
+              args: Record<string, unknown>;
             }>;
           };
         }>;
