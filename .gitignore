@@ -12,3 +12,7 @@ __pycache__/
 *.log
 
 *QUESTIONS*.md
+
+
+*.md
+.DS_Store

@@ -1,9 +1,12 @@
 from django.db import models
-
-# Create your models here.
 from django.contrib.auth.models import User
 
+from .managers import UserProfileManager
+
+
 class UserProfile(models.Model):
+    objects = UserProfileManager()
+
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     friends = models.ManyToManyField(User, related_name='friends', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

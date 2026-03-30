@@ -1,0 +1,92 @@
+"""Schema operations: add and remove columns."""
+from asgiref.sync import sync_to_async
+from django.db import transaction
+
+from expense_api.apps.FinanceManagement.models import DynamicTableData, JsonTable
+from expense_api.apps.agent.servers.base import OperationLogger, ResponseBuilder
+
+from ._base import owns_table
+
+logger = OperationLogger()
+
+
+class SchemaService:
+    @staticmethod
+    async def add_table_column(user_id: int, table_id: int, header: str) -> str:
+        try:
+            if not await owns_table(table_id, user_id):
+                return ResponseBuilder.error("Access denied", "Table not found or not owned by you", 403)
+
+            json_table = await JsonTable.objects.aget(pk=table_id)
+            if header in json_table.headers:
+                return ResponseBuilder.error("Column already exists", f"Header '{header}' already present")
+
+            def _add_column_sync():
+                with transaction.atomic():
+                    jt = JsonTable.objects.get(pk=table_id)
+                    jt.headers = jt.headers + [header]
+                    jt.save()
+                    for row in jt.rows.all():
+                        row.data[header] = None
+                        row.save()
+                    return jt.headers
+
+            new_headers = await sync_to_async(_add_column_sync)()
+            logger.log_operation("add_table_column", user_id, {"table_id": table_id, "header": header}, True)
+            return ResponseBuilder.success(
+                f"Column '{header}' added",
+                {"table_id": table_id, "headers": new_headers},
+            )
+        except JsonTable.DoesNotExist:
+            return ResponseBuilder.not_found("Table", table_id)
+        except Exception as e:
+            return ResponseBuilder.error("Failed to add column", str(e))
+
+    @staticmethod
+    async def delete_table_columns(user_id: int, table_id: int, headers_to_remove: list) -> str:
+        try:
+            if not await owns_table(table_id, user_id):
+                return ResponseBuilder.error("Access denied", "Table not found or not owned by you", 403)
+
+            def _delete_columns_sync():
+                with transaction.atomic():
+                    jt = JsonTable.objects.get(pk=table_id)
+                    jt.headers = [h for h in jt.headers if h not in headers_to_remove]
+                    jt.save()
+                    for row in jt.rows.all():
+                        for h in headers_to_remove:
+                            row.data.pop(h, None)
+                        row.save()
+                    return jt.headers
+
+            new_headers = await sync_to_async(_delete_columns_sync)()
+            logger.log_operation("delete_table_columns", user_id, {"table_id": table_id, "removed": headers_to_remove}, True)
+            return ResponseBuilder.success(
+                f"Removed {len(headers_to_remove)} column(s)",
+                {"table_id": table_id, "headers": new_headers},
+            )
+        except JsonTable.DoesNotExist:
+            return ResponseBuilder.not_found("Table", table_id)
+        except Exception as e:
+            return ResponseBuilder.error("Failed to remove columns", str(e))
+
+    @staticmethod
+    async def get_user_table_schema(user_id: int) -> str:
+        try:
+            lines = ["User's Database Tables:"]
+            found = False
+
+            async for t in DynamicTableData.objects.filter(user_id=user_id).values("id", "table_name"):
+                found = True
+                try:
+                    jt = await JsonTable.objects.aget(table_id=t["id"])
+                    lines.append(f"- Table ID: {t['id']} | Name: {t['table_name']} | Columns: {jt.headers}")
+                except JsonTable.DoesNotExist:
+                    lines.append(f"- Table ID: {t['id']} | Name: {t['table_name']} | Columns: []")
+
+            if not found:
+                return "The user currently has no tables."
+
+            return "\n".join(lines)
+        except Exception as e:
+            return f"Could not fetch schema: {str(e)}"
