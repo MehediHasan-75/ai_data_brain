@@ -24,11 +24,14 @@
 - [Key Engineering Decisions](#key-engineering-decisions)
 - [System Architecture](#system-architecture)
 - [Quick Start](#quick-start)
+- [Usage Examples](#usage-examples)
 - [Project Structure](#project-structure)
 - [API Reference](#api-reference)
 - [Additional Documentation](#additional-documentation)
 - [Environment Variables](#environment-variables)
 - [Troubleshooting / FAQ](#troubleshooting--faq)
+- [License](#license)
+- [Contributing](#contributing)
 
 ---
 
@@ -219,6 +222,40 @@ npm run dev
 
 ---
 
+## Usage Examples
+
+**Create a table:**
+
+> "Create expense table with Date, Category, Amount, Description"
+
+Table created automatically with those four columns.
+
+---
+
+**Add data:**
+
+> "Add 5000 taka expense for groceries"
+
+Date filled automatically, category mapped to the matching column.
+
+---
+
+**Query intelligently:**
+
+> "Show total spending by category this month"
+
+Claude analyzes the data and returns a formatted summary.
+
+---
+
+**Share with a friend:**
+
+> "Share this table with Rahim"
+
+Rahim receives read access instantly.
+
+---
+
 ## Project Structure
 
 ```
@@ -388,3 +425,19 @@ Check that `CORS_ALLOW_CREDENTIALS = True` is set and that your frontend sends `
 
 **Q: `populate() has already been called` on server startup**
 Django's `setup()` was called twice. Remove the `os.environ.setdefault` + `django.setup()` block from any file that isn't the entry point — `mcp_instance.py` already handles this correctly with the `if not apps.ready:` guard.
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## Contributing
+
+Contributions are welcome. Please:
+
+1. Fork the repository
+2. Create a feature branch
+3. Submit a pull request with a clear description of the change
