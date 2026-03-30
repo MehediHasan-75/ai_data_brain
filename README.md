@@ -2,11 +2,13 @@
 
 # AI Data Brain
 
-**A production-grade Django + MCP backend. Talk to your data in natural language. Claude reads your tables, understands your intent, and writes back — in Bengali or English.**
+**A full-stack AI-powered data platform. Create any table you can imagine, then manage it entirely through natural conversation — in Bengali or English. No SQL. No forms. Just talk.**
 
 [![Python](https://img.shields.io/badge/Python-3.12-3776AB?style=flat-square&logo=python&logoColor=white)](https://python.org)
 [![Django](https://img.shields.io/badge/Django-5.2-092E20?style=flat-square&logo=django&logoColor=white)](https://djangoproject.com)
-[![DRF](https://img.shields.io/badge/DRF-3.16-red?style=flat-square)](https://www.django-rest-framework.org)
+[![Next.js](https://img.shields.io/badge/Next.js-15-black?style=flat-square&logo=next.js&logoColor=white)](https://nextjs.org)
+[![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white)](https://react.dev)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=flat-square&logo=typescript&logoColor=white)](https://typescriptlang.org)
 [![Claude](https://img.shields.io/badge/Claude-Sonnet_4.6-CC785C?style=flat-square)](https://anthropic.com)
 [![MCP](https://img.shields.io/badge/MCP-FastMCP-6B4FBB?style=flat-square)](https://github.com/jlowin/fastmcp)
 [![LangGraph](https://img.shields.io/badge/LangGraph-ReAct_Agent-1C3C3C?style=flat-square)](https://langchain-ai.github.io/langgraph/)
@@ -18,144 +20,215 @@
 
 ## Table of Contents
 
-- [About / Why This Project](#about--why-this-project)
 - [What This Is](#what-this-is)
-- [How It Works Under the Hood](#how-it-works-under-the-hood)
+- [How It Works End-to-End](#how-it-works-end-to-end)
 - [Key Engineering Decisions](#key-engineering-decisions)
 - [System Architecture](#system-architecture)
+- [Features](#features)
+- [Tech Stack](#tech-stack)
 - [Quick Start](#quick-start)
-- [Usage Examples](#usage-examples)
 - [Project Structure](#project-structure)
 - [API Reference](#api-reference)
-- [Additional Documentation](#additional-documentation)
 - [Environment Variables](#environment-variables)
+- [Additional Documentation](#additional-documentation)
 - [Troubleshooting / FAQ](#troubleshooting--faq)
-- [License](#license)
 - [Contributing](#contributing)
-
----
-
-## About / Why This Project
-
-Most AI demos talk to a fixed database schema: "here are my tables, ask me questions." This project flips that. The *schema itself is dynamic* — users create tables, columns, and rows through a conversation. There is no `ALTER TABLE`. There is no migration file. The entire spreadsheet-like data layer lives in JSON columns that reshape themselves at runtime.
-
-**The core questions this project answers:**
-- How do you connect an LLM to a live database so it can read, write, and reason across multiple steps without the user writing SQL?
-- How do you safely bridge Django's synchronous ORM with Python's async world — in a production MCP server that runs fully async?
-- How do you prevent a smart LLM from accessing another user's data even when it controls the tool calls?
-
-**What this is not:** a finished product. Every architectural decision is documented with the problem it solves and the trade-off accepted. Built for learning, portfolio, and interview discussion.
+- [Author](#author)
+- [License](#license)
 
 ---
 
 ## What This Is
 
-AI Data Brain gives users a personal spreadsheet managed entirely through natural language. You say "create a table for my monthly expenses with columns Date, Category, and Amount" — and Claude creates it. You say "add a row: March rent, 25000 taka" — Claude parses and inserts it. You say "what did I spend most on last month?" — Claude reads your data and answers.
+AI Data Brain gives every user a personal, AI-managed spreadsheet system. You say *"create a table for my monthly expenses with columns Date, Category, and Amount"* — and Claude creates it. You say *"add a row: March rent, 25000 taka"* — Claude parses and inserts it. You say *"what did I spend most on last month?"* — Claude reads your data and answers.
 
-**What you can do with it:**
+The schema is fully dynamic. There is no `ALTER TABLE`. There are no migration files for user tables. The entire data layer reshapes itself at runtime based on what you ask for.
 
-- Create dynamic tables with any columns you want — no predefined schema
-- Add, update, and delete rows and columns through conversational requests
-- Share tables with friends and control who sees what
+**What you can do:**
+
+- Create tables with any columns you want — no predefined schema
+- Add, update, and delete rows and columns via natural language chat
+- Share tables with friends and control access per-user
 - Query and summarize your data in Bengali or English
 - Stream AI responses token-by-token for real-time feedback
-- Access all operations via a standard REST API (for the frontend) or via MCP (for the AI)
+- Access everything through a polished Next.js UI with virtualized table rendering
+- Use voice input for truly hands-free operation
 
-The project has two parallel interfaces for data: a REST API that the frontend calls directly, and an MCP server that Claude calls when processing a natural language query. Both talk to the same service layer.
+The project has two parallel paths to the same data: a **REST API** the frontend calls directly, and an **MCP server** that Claude calls when processing your query. Both talk to the same database.
 
 ---
 
-## How It Works Under the Hood
+## How It Works End-to-End
 
-> A precise walkthrough of what happens from the moment you type a query to the moment Claude writes data back.
+> A step-by-step walkthrough from typing a message to seeing the result in the table.
 
-**1. User sends a query**
-The frontend `POST /api/agent/query/` with a message like "add row: coffee 150 taka today". The `AgentAPIView` authenticates via JWT cookie, validates the request with a DRF serializer, and calls `run_query(query, user_id)`.
+**1. User types in the chat box**
+The Next.js frontend sends `POST /api/chat/stream` to the Next.js BFF (Backend For Frontend). The BFF forwards the request to Django at `POST /agent/streaming/` with the user's HttpOnly session cookie attached server-side — browser JavaScript never touches the cookie directly.
 
-**2. LLM Provider selection**
-`LLMProvider` creates a LangChain-compatible LLM client — Claude Sonnet, Gemini, or DeepSeek depending on the `llm_provider` field. All three implement the same interface, so the agent doesn't care which model is running.
+**2. Django authenticates and routes**
+`AgentStreamingAPIView` validates the JWT cookie via the custom `JWTAuthentication` backend, extracts `user_id`, and calls `stream_query(query, user_id)`.
 
-**3. ReAct Agent kicks in**
-`get_agent()` constructs a LangGraph `create_react_agent` — a loop that lets the LLM reason, pick a tool, observe the result, and repeat until it decides it's done. The agent has 10 finance tools available (create table, add row, update row, delete column, etc.) plus a schema resource that tells it what tables the user already has.
+**3. LLM Provider selection**
+`LLMProvider` creates a LangChain-compatible client — Claude Sonnet 4.6, Gemini, or DeepSeek — depending on the configured provider. All three implement the same interface so the rest of the system doesn't care which model runs.
 
-**4. Schema context injection**
-Before the first LLM call, the agent fetches `schema://tables/{user_id}` — a live summary of all the user's tables and their column names. This means Claude always knows what exists before it tries to write.
+**4. ReAct Agent loop begins**
+`get_agent()` builds a LangGraph `create_react_agent` — a loop that lets the LLM reason, pick a tool, observe the result, and repeat until it decides it's done. Ten finance tools are available (`create_table`, `add_table_row`, `update_row`, `delete_column`, etc.) plus a live schema resource.
 
-**5. Tool execution**
-When Claude picks a tool (e.g., `add_table_row`), FastMCP deserializes the arguments using the `Annotated[type, Field(...)]` parameter pattern, validates them via Pydantic, and calls the async Django service. The `user_id` is injected from the context variable — Claude cannot set it, only the server can.
+**5. Schema context injection**
+Before the first LLM call, the agent fetches `schema://tables/{user_id}` — a live snapshot of the user's current tables and column names. Claude always knows what exists before it tries to write.
 
-**6. Async/sync bridge**
-The Django ORM is synchronous. The MCP server runs fully async. The bridge is `sync_to_async` from `asgiref` — it runs the synchronous ORM call in a thread pool so the async event loop never blocks.
+**6. Tool execution via FastMCP**
+When Claude picks a tool, FastMCP deserializes arguments using `Annotated[type, Field(...)]`, validates via Pydantic, and calls the async Django service. The `user_id` is injected from a `ContextVar` — Claude cannot override it.
 
-**7. Response back**
-The tool returns a JSON string via `ResponseBuilder`. Claude reads it, decides if it's done, and writes a human-readable summary. That summary is returned to the view, cleaned of any LLM step noise, and sent back to the frontend. For streaming, `stream_query()` yields token-by-token SSE events.
+**7. Async/sync bridge**
+The Django ORM is synchronous. The MCP server runs fully async. `sync_to_async` from `asgiref` runs each ORM call in a thread pool so the async event loop never blocks.
+
+**8. Response streams back**
+The tool returns a JSON result. Claude reads it, continues reasoning if needed, then writes a human-readable summary. The Django view yields it as an SSE event. The Next.js BFF translates it into the Vercel AI SDK data-stream format (`0:"text"\n`). The frontend's `useChat` hook appends tokens live as they arrive.
+
+**9. Table updates instantly**
+The `onFinish` callback in `ChatContainer` calls `queryClient.invalidateQueries(['tables', tableId, 'content'])`. TanStack Query refetches the table data. The virtual table re-renders only the visible rows — even for 10,000-row tables.
 
 ---
 
 ## Key Engineering Decisions
 
-> These are the non-obvious choices that shaped the system. Each solves a specific problem.
-
 | Decision | Problem It Solves | Trade-off Accepted |
 |----------|-------------------|--------------------|
-| **3-tier JSON schema** — `DynamicTableData` + `JsonTable` (headers) + `JsonTableRow` (data) | Traditional relational columns need a schema defined upfront. Users want to create arbitrary columns at runtime | JSON columns lose relational integrity guarantees (no foreign keys between columns); row data is not type-validated at the DB level |
-| **MCP over direct function calls** — Claude accesses data via typed MCP tools, not raw DB access | Without MCP, Claude would need to generate SQL or call a generic API; it couldn't reason across multi-step operations reliably | MCP server is a separate process; adds a network hop and startup overhead |
-| **`Annotated[type, Field(...)]` for tool parameters** — not `param: int = Field(description="...")` | FastMCP inspects `inspect.signature`. `Field(...)` as a default causes Pydantic to receive `FieldInfo` as the int's default value → all ints arrive as `0`. `Annotated` puts the metadata in the type, not the default | Slightly more verbose parameter declarations |
-| **`Field(exclude=True)` on `user_id`** — hidden from Claude's tool schema | If `user_id` is visible in the schema, a sufficiently clever LLM could pass `user_id=5` to access another user's tables | `user_id` is hardcoded to `1` in MCP tools (the HTTP layer handles real user injection via `_current_user_id` context var) |
-| **`sync_to_async` wrapper instead of Django async ORM everywhere** — column operations use `sync_to_async(_sync_fn)()` | Django's async ORM is incomplete: `bulk_update`, complex transactions, and some queryset operations require the synchronous path. Wrapping preserves atomic transactions while staying on the async event loop | Slightly more boilerplate; sync code runs in a thread pool, not the main async loop |
-| **Custom JWT in HttpOnly cookies** — not `Authorization: Bearer` header | Browser JS cannot access HttpOnly cookies, making XSS token theft impossible. Stateless JWT means no session storage needed | Requires custom `JWTAuthentication` backend; CSRF protection must be explicit; `secure=True` required in production |
-| **Service layer between views and ORM** — all business logic in `services.py`, never in views | Fat views become untestable and impossible to reuse. Views should only handle HTTP — validate input, call service, return response | More files; junior developers must understand which layer to put code in |
-| **`ContextVar` for user identity in MCP tools** — `_current_user_id.set(user_id)` before each agent call | If the LLM controls `user_id` as a tool parameter, a prompt-injection attack can read another user's data | Only works within the same async task; cross-task context variables need explicit propagation |
-| **Ownership checks in every service method** — `JsonTable.objects.get(pk=table_id, table__user=user)` | Without ownership checks, any authenticated user can modify any table by guessing its integer ID | Slightly longer queries; must remember to pass `user` to every service call |
-| **LangGraph ReAct agent over a simple LLM call** — multi-step reasoning loop | A single prompt can't handle "rename column X in my expenses table, then add a row" — it requires reading the table first, then acting | ReAct adds latency per step; each tool call is a round-trip to Claude |
+| **3-tier JSON schema** (`DynamicTableData` → `JsonTable` → `JsonTableRow`) | Traditional relational tables require upfront schema; users want arbitrary columns at runtime | No relational integrity guarantees between columns; row data is not DB-level type-validated |
+| **MCP over direct function calls** | Without MCP, Claude would generate raw SQL or call a generic API; it couldn't reliably multi-step | Separate MCP process adds a network hop and startup overhead |
+| **`Annotated[type, Field(...)]` for tool parameters** | `Field(...)` as a default causes Pydantic to receive `FieldInfo` as the int's default → all ints arrive as `0` | Slightly more verbose parameter declarations |
+| **`Field(exclude=True)` on `user_id`** | If `user_id` is in Claude's tool schema, prompt injection can target another user's tables | `user_id` must be injected via `ContextVar` — cannot be passed by the model |
+| **`sync_to_async` bridge** | Django async ORM is incomplete (`bulk_update`, transactions); sync path preserves atomicity | Sync code runs in a thread pool, not the main async loop |
+| **HttpOnly JWT cookies, not `Authorization` headers** | Browser JS cannot read HttpOnly cookies — XSS token theft is impossible | Custom `JWTAuthentication` backend required; CSRF must be handled explicitly |
+| **Next.js BFF (Route Handlers)** | Three separate Axios clients had duplicate CSRF/refresh logic; browser→Django direct calls are brittle across environments | All API calls go through `/api/*`; adds one network hop in the browser |
+| **TanStack Query for server state** | Context + `useReducer` caused full-tree re-renders on every cell edit | Query cache must be kept in sync with mutations (invalidation strategy) |
+| **`@tanstack/react-virtual` for table rows** | Rendering 500+ rows caused the DOM to choke — mobile crashed, desktop lagged | Fixed row height (40px) required; dynamic measurement adds jank |
+| **Vercel AI SDK `useChat`** | Rolling a custom streaming hook requires SSE parsing, error recovery, abort handling | BFF must emit the exact Vercel data-stream protocol (`0:"text"\n`, `8:[annotations]\n`) |
+| **LangGraph ReAct agent** | A single LLM call can't handle multi-step operations like "rename column X then add a row" | Each tool call is a round-trip to Claude; latency compounds with step count |
 
 ---
 
 ## System Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        React Frontend                            │
-│              (Next.js 15 + Tailwind CSS + Web Speech API)        │
-└──────────────────────┬──────────────────────────────────────────┘
-                       │ HTTPS  (JWT in HttpOnly cookies)
-┌──────────────────────▼──────────────────────────────────────────┐
-│                     Django + DRF                                  │
-│  ┌────────────────┐  ┌──────────────────┐  ┌─────────────────┐  │
-│  │  user_auth app │  │ FinanceManagement │  │   agent app     │  │
-│  │  /api/auth/    │  │   /api/main/     │  │  /api/agent/    │  │
-│  └────────────────┘  └──────────────────┘  └────────┬────────┘  │
-│                                                       │           │
-│                              ┌────────────────────────▼────────┐ │
-│                              │        LangGraph ReAct Agent    │ │
-│                              │  (run_query / stream_query)     │ │
-│                              └────────────────────────┬────────┘ │
-└───────────────────────────────────────────────────────┼──────────┘
-                                                         │ tool calls
-┌───────────────────────────────────────────────────────▼──────────┐
-│                    FastMCP Finance Server                          │
-│  tools.py (10 tools)  resources.py (schema)  prompts.py          │
-│                              │                                     │
-│               ┌──────────────┴─────────────┐                      │
-│          services/                     services/                   │
-│      TableService  RowService  ColumnService  QueryService         │
-│                              │                                     │
-│                    sync_to_async bridge                            │
-│                              │                                     │
-└──────────────────────────────┼────────────────────────────────────┘
-                                │ ORM queries
-┌──────────────────────────────▼────────────────────────────────────┐
-│                    PostgreSQL / SQLite                              │
-│  DynamicTableData   JsonTable   JsonTableRow                       │
-│  ChatSession        ChatMessage  UserProfile                       │
-└────────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                      Browser (Next.js 15)                           │
+│                                                                     │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
+│  │  Landing Page    │  │  /chat (dashboard)│  │  /users          │  │
+│  └──────────────────┘  └────────┬─────────┘  └──────────────────┘  │
+│                                 │                                   │
+│  ┌──────────────────────────────▼──────────────────────────────┐    │
+│  │  TanStack Query (server state) + Zustand uiStore (UI state) │    │
+│  └──────────────────────────────┬──────────────────────────────┘    │
+│                                 │                                   │
+│  ┌──────────────────────────────▼──────────────────────────────┐    │
+│  │          Next.js Route Handlers (BFF)  /api/*               │    │
+│  │   auth/ · tables/ · users/ · chat/stream · notifications/   │    │
+│  └──────────────────────────────┬──────────────────────────────┘    │
+└─────────────────────────────────┼───────────────────────────────────┘
+                                  │ HTTP + HttpOnly cookie forwarding
+┌─────────────────────────────────▼───────────────────────────────────┐
+│                         Django + DRF                                │
+│                                                                     │
+│  ┌──────────────────┐  ┌─────────────────┐  ┌──────────────────┐   │
+│  │  user_auth app   │  │ FinanceManagement│  │   agent app      │   │
+│  │  /auth/*         │  │   /main/*        │  │  /agent/*        │   │
+│  └──────────────────┘  └─────────────────┘  └────────┬─────────┘   │
+│                                                       │             │
+│                              ┌────────────────────────▼──────────┐  │
+│                              │     LangGraph ReAct Agent          │  │
+│                              │  (run_query / stream_query)        │  │
+│                              └────────────────────────┬──────────┘  │
+└───────────────────────────────────────────────────────┼─────────────┘
+                                                         │ MCP tool calls
+┌───────────────────────────────────────────────────────▼─────────────┐
+│                   FastMCP Finance Server                             │
+│   tools.py (10 tools)  resources.py (schema)  prompts.py            │
+│                                                                     │
+│   TableService · RowService · ColumnService · QueryService          │
+│                   sync_to_async bridge                              │
+└───────────────────────────────────────────────────────┬─────────────┘
+                                                         │ ORM queries
+┌───────────────────────────────────────────────────────▼─────────────┐
+│                       SQLite / PostgreSQL                            │
+│   DynamicTableData · JsonTable · JsonTableRow                        │
+│   ChatSession · ChatMessage · UserProfile                            │
+└─────────────────────────────────────────────────────────────────────┘
 ```
 
 **Two paths to the same data:**
-- **REST path** — Frontend → DRF views → `FinanceManagement/services.py` → ORM
-- **MCP path** — DRF Agent view → LangGraph → FastMCP tools → `agent/servers/finance/services/` → `sync_to_async` → ORM
+- **REST path** — Browser → BFF → Django DRF views → `FinanceManagement/services.py` → ORM
+- **MCP path** — Browser → BFF → Django Agent view → LangGraph → FastMCP tools → async services → `sync_to_async` → ORM
 
-Both paths hit the same database, but via separate service layers. The MCP services are async-first; the REST services are sync (Django's standard).
+---
+
+## Features
+
+### Frontend
+
+| # | Feature | Detail |
+|---|---------|--------|
+| 1 | **Real-time AI chat** | Vercel AI SDK `useChat` hook; responses stream token-by-token via the BFF adapter |
+| 2 | **Tool call visualizer** | Collapsible badges showing which MCP tools Claude called and with what arguments |
+| 3 | **Virtualized table** | TanStack Table v8 + `@tanstack/react-virtual`; renders only visible rows — 10,000 rows at 60 fps |
+| 4 | **Inline cell editing** | Click any cell to edit; auto-saves on blur/Enter via optimistic mutation |
+| 5 | **Column management** | Double-click header to rename; hover to delete column |
+| 6 | **Sidebar table browser** | Live-updating list of all tables; create, delete, and share from the sidebar |
+| 7 | **Table sharing** | Share any table with friends; inline friend-picker panel |
+| 8 | **Voice input** | `react-speech-recognition` for hands-free chat entry |
+| 9 | **Dark / light theme** | CSS class toggle via `ThemeProvider`; no flash on reload |
+| 10 | **BFF security layer** | All API calls proxied through Next.js Route Handlers; cookies forwarded server-side |
+
+### Backend
+
+| # | Feature | Detail |
+|---|---------|--------|
+| 1 | **Dynamic table schema** | Create tables with any columns at runtime — stored as JSON, no migrations |
+| 2 | **Multi-step ReAct agent** | LangGraph agent that reasons, calls tools, observes results, and loops |
+| 3 | **10 MCP finance tools** | Create/delete table, add/update/delete row, add/rename/delete column, share, query |
+| 4 | **Live schema resource** | `schema://tables/{user_id}` gives Claude a real-time view of the user's tables before acting |
+| 5 | **Streaming responses** | `stream_query()` yields SSE events; `AgentStreamingResponse` carries full tool trace |
+| 6 | **Bengali + English** | LLM handles both languages natively; no translation layer |
+| 7 | **User-scoped data isolation** | `user_id` injected via `ContextVar`; ownership checked at every service layer |
+| 8 | **JWT in HttpOnly cookies** | Session cookies prevent XSS-based token theft |
+| 9 | **Multi-provider LLM** | Swap between Claude Sonnet, Gemini, and DeepSeek via one env variable |
+| 10 | **REST API** | Full CRUD REST API alongside the MCP path — used by the frontend directly |
+
+---
+
+## Tech Stack
+
+### Backend
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Web framework | Django + DRF | 5.2 / 3.15 |
+| Language | Python | 3.12 |
+| Auth | DRF SimpleJWT (HttpOnly cookies) | 5.3 |
+| Agent framework | LangGraph (ReAct) | 0.4 |
+| LLM providers | Anthropic, Google Gemini, DeepSeek | via LangChain |
+| MCP server | FastMCP | 1.9 |
+| Data validation | Pydantic | 2.0 |
+| Async bridge | asgiref `sync_to_async` | 3.8 |
+| Database | SQLite (dev) / PostgreSQL (prod) | — |
+
+### Frontend
+
+| Layer | Technology | Version |
+|-------|-----------|---------|
+| Framework | Next.js (App Router) | 15 |
+| UI library | React | 19 |
+| Language | TypeScript | 5 |
+| Styling | Tailwind CSS | 4 |
+| Server state | TanStack Query | 5 |
+| UI state | Zustand | 5 |
+| Table | TanStack Table + react-virtual | 8 / 3 |
+| Chat streaming | Vercel AI SDK (`ai/react`) | 4 |
+| Code highlighting | highlight.js | 11 |
+| Voice input | react-speech-recognition | 4 |
+| Testing | Vitest + Playwright + MSW | 4 / 1.58 / 2 |
 
 ---
 
@@ -164,95 +237,63 @@ Both paths hit the same database, but via separate service layers. The MCP servi
 ### Prerequisites
 
 - Python 3.12+
-- Node.js 18+ (for frontend)
-- PostgreSQL (or SQLite for development)
+- Node.js 20+
 - An [Anthropic API key](https://console.anthropic.com/)
 
-### Backend Setup
+### 1. Clone
 
 ```bash
-# 1. Clone and enter the backend directory
 git clone https://github.com/MehediHasan-75/ai_data_brain.git
-cd ai_data_brain/backend
-
-# 2. Create virtual environment
-python -m venv venv
-source venv/bin/activate   # Windows: venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -r requirements.txt
-
-# 4. Configure environment
-cp .env.example .env
-# Edit .env — minimum required:
-#   SECRET_KEY=<run: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())">
-#   ANTHROPIC_API_KEY=<your key>
-#   DJANGO_SETTINGS_MODULE=expense_api.settings.development
-
-# 5. Run migrations
-python manage.py migrate
-
-# 6. Create a superuser (optional, for admin)
-python manage.py createsuperuser
-
-# 7. Start the Django server
-python manage.py runserver
-# API is now at http://localhost:8000/api/
+cd ai_data_brain
 ```
 
-### MCP Dev Server (for testing tools in isolation)
+### 2. Backend Setup
 
 ```bash
 cd backend
-mcp dev expense_api/apps/agent/servers/finance/server.py
-# Opens the MCP Inspector at http://localhost:5173/
-# Use it to call tools directly without the LLM in the loop
+
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate        # Windows: venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Minimum required in .env:
+#   SECRET_KEY=<generate with: python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())">
+#   ANTHROPIC_API_KEY=sk-ant-...
+#   DJANGO_SETTINGS_MODULE=expense_api.settings.development
+
+# Run database migrations
+python manage.py migrate
+
+# Start the server
+python manage.py runserver
+# → Django running at http://localhost:8000
 ```
 
-### Frontend Setup
+### 3. Frontend Setup
 
 ```bash
 cd frontend
+
+# Install dependencies
 npm install
+
+# Configure environment
 cp .env.example .env.local
-# Set NEXT_PUBLIC_API_URL=http://localhost:8000
+# Set in .env.local:
+#   DJANGO_API_URL=http://localhost:8000
+#   NEXT_PUBLIC_API_BASE_URL=/api
+
+# Start the dev server
 npm run dev
-# Frontend at http://localhost:3000
+# → Next.js running at http://localhost:3000
 ```
 
----
-
-## Usage Examples
-
-**Create a table:**
-
-> "Create expense table with Date, Category, Amount, Description"
-
-Table created automatically with those four columns.
-
----
-
-**Add data:**
-
-> "Add 5000 taka expense for groceries"
-
-Date filled automatically, category mapped to the matching column.
-
----
-
-**Query intelligently:**
-
-> "Show total spending by category this month"
-
-Claude analyzes the data and returns a formatted summary.
-
----
-
-**Share with a friend:**
-
-> "Share this table with Rahim"
-
-Rahim receives read access instantly.
+Open [http://localhost:3000](http://localhost:3000), register, and start chatting with your data.
 
 ---
 
@@ -262,183 +303,194 @@ Rahim receives read access instantly.
 ai_data_brain/
 ├── backend/
 │   ├── expense_api/
-│   │   ├── settings/
-│   │   │   ├── base.py          — shared settings (SECRET_KEY, middleware, apps)
-│   │   │   ├── development.py   — SQLite, DEBUG=True
-│   │   │   ├── production.py    — PostgreSQL, HTTPS security headers
-│   │   │   └── testing.py       — in-memory SQLite
 │   │   ├── apps/
-│   │   │   ├── user_auth/       — JWT auth, UserProfile, friends system
-│   │   │   │   ├── models.py
-│   │   │   │   ├── authentication.py  — JWT encode/decode (uses SECRET_KEY)
-│   │   │   │   ├── permission.py      — JWTAuthentication (reads from cookie)
-│   │   │   │   ├── services.py        — AuthService, UserService
-│   │   │   │   ├── views.py
-│   │   │   │   └── urls.py
-│   │   │   ├── FinanceManagement/   — dynamic tables, rows, columns, sharing
-│   │   │   │   ├── models.py         — DynamicTableData, JsonTable, JsonTableRow
-│   │   │   │   ├── managers.py       — for_user(), bulk_rename_key()
-│   │   │   │   ├── services.py       — TableService, RowService, ColumnService, SharingService
-│   │   │   │   ├── views.py
-│   │   │   │   └── urls.py
-│   │   │   └── agent/               — AI chat, LLM integration, MCP client
-│   │   │       ├── models.py         — ChatSession, ChatMessage
-│   │   │       ├── services.py       — ChatSessionService, AgentQueryService
-│   │   │       ├── views.py          — AgentAPIView, streaming, chat session CRUD
-│   │   │       ├── client/
-│   │   │       │   ├── core/
-│   │   │       │   │   └── local_client.py   — run_query(), stream_query()
-│   │   │       │   ├── config/
-│   │   │       │   │   └── providers.py      — LLMProvider (Anthropic/Gemini/DeepSeek)
-│   │   │       │   └── prompts/
-│   │   │       │       └── system.py         — system prompt (Bengali + English)
-│   │   │       └── servers/
-│   │   │           └── finance/
-│   │   │               ├── mcp_instance.py   — FastMCP("finance_management")
-│   │   │               ├── tools.py          — 10 @mcp.tool definitions
-│   │   │               ├── resources.py      — schema://tables/{user_id}
-│   │   │               ├── prompts.py        — prompt templates
-│   │   │               ├── server.py         — entry point for `mcp dev`
-│   │   │               └── services/
-│   │   │                   ├── _base.py      — owns_table(), _current_user_id ContextVar
-│   │   │                   ├── table_service.py
-│   │   │                   ├── row_service.py
-│   │   │                   ├── schema_service.py
-│   │   │                   └── query_service.py
-│   │   └── urls.py              — root URL config
+│   │   │   ├── agent/                  # LangGraph agent + FastMCP server
+│   │   │   │   ├── servers/finance/
+│   │   │   │   │   ├── tools.py        # 10 MCP tool definitions
+│   │   │   │   │   ├── resources.py    # schema:// live resource
+│   │   │   │   │   ├── prompts.py      # system prompt
+│   │   │   │   │   └── services/       # async service layer
+│   │   │   │   ├── agent.py            # LangGraph ReAct agent builder
+│   │   │   │   ├── llm_provider.py     # LLM factory (Claude/Gemini/DeepSeek)
+│   │   │   │   └── views.py            # AgentAPIView + AgentStreamingAPIView
+│   │   │   ├── FinanceManagement/      # REST CRUD for tables/rows/columns
+│   │   │   │   ├── models.py           # DynamicTableData, JsonTable, JsonTableRow
+│   │   │   │   ├── services.py         # Business logic (sync)
+│   │   │   │   ├── serializers.py      # DRF serializers
+│   │   │   │   └── views.py            # DRF ViewSets
+│   │   │   └── user_auth/              # Registration, login, JWT, friends
+│   │   ├── settings/
+│   │   │   ├── base.py
+│   │   │   ├── development.py
+│   │   │   └── production.py
+│   │   └── urls.py
+│   ├── manage.py
 │   └── requirements.txt
-├── frontend/                    — Next.js 15 app
-└── docs/                        — this documentation
-    ├── authentication.md
-    ├── database.md
-    ├── finance-management.md
-    ├── async-sync-django.md
-    ├── mcp-server.md
-    └── agent-client.md
+│
+├── frontend/
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── api/                    # BFF Route Handlers
+│   │   │   │   ├── auth/               # login, logout, register, me, refresh
+│   │   │   │   ├── tables/             # CRUD + rows + columns + share
+│   │   │   │   ├── users/              # users + friends
+│   │   │   │   ├── chat/               # stream + sessions + messages
+│   │   │   │   └── notifications/      # SSE polling endpoint
+│   │   │   ├── chat/page.tsx           # Dashboard (sidebar + table + chat)
+│   │   │   ├── signin/page.tsx         # Auth form
+│   │   │   ├── users/page.tsx          # Friends management
+│   │   │   └── page.tsx                # Landing page
+│   │   ├── features/
+│   │   │   ├── chat/                   # ChatContainer, MessageBubble, ToolCallVisualizer
+│   │   │   ├── tables/                 # VirtualTableContainer, EditableCell, DataTableHeader
+│   │   │   └── sidebar/                # SideBar, SideBarEntry, CreateTableModal
+│   │   ├── stores/
+│   │   │   ├── uiStore.ts              # selectedTableId, sidebarOpen, chatOpen
+│   │   │   └── authStore.ts            # user object, isLoading
+│   │   ├── lib/
+│   │   │   ├── queryClient.ts          # TanStack Query client (staleTime: 60s)
+│   │   │   └── serverFetch.ts          # Cookie-forwarding BFF fetch helper
+│   │   ├── middleware.ts               # Edge auth guard → /signin redirect
+│   │   └── types/index.ts             # Canonical TypeScript types
+│   ├── tests/
+│   │   ├── unit/stores/               # Vitest store tests (9/9 passing)
+│   │   └── e2e/                       # Playwright E2E suites
+│   └── docs/                          # Frontend deep-dive documentation
+│
+├── docs/                              # Backend architecture docs
+│   ├── authentication.md
+│   ├── database.md
+│   ├── finance-management.md
+│   ├── agent-client.md
+│   ├── mcp-server.md
+│   ├── async-sync-django.md
+│   └── frontend-guide.md
+│
+└── AI_Data_Brain.postman_collection.json
 ```
 
 ---
 
 ## API Reference
 
-### Authentication (`/api/auth/`)
+### Authentication (`/auth/`)
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/register/` | No | Create account, receive JWT cookies |
-| `POST` | `/login/` | No | Login, receive JWT cookies |
-| `POST` | `/logout/` | Yes | Clear JWT cookies |
-| `GET` | `/me/` | Yes | Get current user profile |
-| `POST` | `/update/` | Yes | Change own password |
-| `POST` | `/update-profile/` | Yes | Update email or username |
-| `GET` | `/updateAcessToken/` | No | Rotate access token using refresh cookie |
-| `GET` | `/users-list/` | Yes | Search users (paginated, 20/page) |
-| `GET` | `/users-list/<user_id>/` | Yes | Get specific user |
-| `GET` | `/friends/` | Yes | List your friends (bidirectional) |
-| `POST` | `/friends/manage/` | Yes | Add or remove a friend |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/auth/register/` | Create account |
+| `POST` | `/auth/login/` | Login — sets HttpOnly JWT cookies |
+| `POST` | `/auth/logout/` | Clear cookies |
+| `GET` | `/auth/me/` | Get current user |
+| `GET` | `/auth/updateAcessToken/` | Refresh access token |
+| `GET` | `/auth/users-list/` | List all users |
+| `GET`/`POST` | `/auth/friends/` | List friends / manage friend |
 
-### Finance (`/api/main/`)
+### Tables (`/main/`)
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `GET` | `/tables/` | Yes | List all owned + shared tables |
-| `POST` | `/create-tableContent/` | Yes | Create table with headers |
-| `PUT` | `/tables/update/` | Yes | Update table name/description |
-| `DELETE` | `/tables/<table_id>/` | Yes | Delete table and all rows |
-| `GET` | `/table-contents/` | Yes | All table data (headers + rows) |
-| `POST` | `/add-row/` | Yes | Insert a row (ownership verified) |
-| `PATCH` | `/update-row/` | Yes | Update a row by ID |
-| `POST` | `/delete-row/` | Yes | Delete a row by ID |
-| `POST` | `/add-column/` | Yes | Add column, backfill existing rows |
-| `POST` | `/delete-column/` | Yes | Remove column and strip from all rows |
-| `POST` | `/edit-header/` | Yes | Rename a column |
-| `POST` | `/share-table/` | Yes | Share/unshare with friends |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `GET` | `/main/tables/` | List user's tables |
+| `POST` | `/main/create-tableContent/` | Create new table |
+| `DELETE` | `/main/tables/{id}/` | Delete table |
+| `GET` | `/main/table-contents/` | Get all table contents |
+| `POST` | `/main/add-row/` | Add a row |
+| `PATCH` | `/main/update-row/` | Update a row |
+| `DELETE` | `/main/delete-row/` | Delete a row |
+| `POST` | `/main/add-column/` | Add a column |
+| `DELETE` | `/main/delete-column/` | Delete a column |
+| `PATCH` | `/main/edit-column/` | Rename a column |
+| `POST` | `/main/share-table/` | Share table with user |
 
-### Agent (`/api/agent/`)
+### Agent (`/agent/`)
 
-| Method | Endpoint | Auth | Description |
-|--------|----------|------|-------------|
-| `POST` | `/query/` | Yes | Send a query, get full response |
-| `POST` | `/streaming/` | Yes | Send a query, stream tokens via NDJSON |
-| `GET` | `/chat/sessions/` | Yes | List active chat sessions |
-| `POST` | `/chat/sessions/` | Yes | Create a chat session |
-| `GET` | `/chat/sessions/<session_id>/` | Yes | Get session details |
-| `PUT` | `/chat/sessions/<session_id>/` | Yes | Update session (e.g., rename) |
-| `DELETE` | `/chat/sessions/<session_id>/` | Yes | Soft-delete session |
-| `GET` | `/chat/sessions/<session_id>/messages/` | Yes | Get all messages in session |
-| `DELETE` | `/chat/sessions/<session_id>/messages/` | Yes | Clear all messages |
-| `POST` | `/chat/sessions/<session_id>/messages/` | Yes | Save a message |
-| `GET` | `/prompts/` | Yes | List available prompt templates |
-| `POST` | `/prompts/<prompt_name>/` | Yes | Invoke a prompt template |
-
----
-
-## Additional Documentation
-
-| Document | What It Covers |
-|----------|----------------|
-| [`docs/authentication.md`](docs/authentication.md) | JWT lifecycle, HttpOnly cookies, custom auth backend, permission system, security model |
-| [`docs/database.md`](docs/database.md) | Django ORM, models, JSON fields, managers, the 3-tier dynamic schema pattern |
-| [`docs/finance-management.md`](docs/finance-management.md) | Tables/rows/columns API, service layer, ownership checks, sharing system |
-| [`docs/async-sync-django.md`](docs/async-sync-django.md) | Why Django ORM is sync, `sync_to_async`, `async for`, the async/sync bridge pattern |
-| [`docs/mcp-server.md`](docs/mcp-server.md) | What MCP is, FastMCP, tool parameters (the `Annotated` fix), resources, prompts |
-| [`docs/agent-client.md`](docs/agent-client.md) | LangGraph ReAct agent, LLM providers, streaming, the full query lifecycle |
-| [`docs/frontend-guide.md`](docs/frontend-guide.md) | Next.js 15 + React 19 frontend: setup, API client, contexts, reducers, components, implementation order |
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| `POST` | `/agent/query/` | Single-turn AI query (sync) |
+| `POST` | `/agent/streaming/` | Multi-turn streaming query (SSE) |
 
 ---
 
 ## Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `SECRET_KEY` | **Yes** | — | Django secret key. Generate with `python -c "from django.core.management.utils import get_random_secret_key; print(get_random_secret_key())"`. Used for JWT signing and CSRF. |
-| `DEBUG` | No | `False` | Set `True` in development. Controls cookie `secure` flag, error pages, and SQL logging. **Never `True` in production.** |
-| `ALLOWED_HOSTS` | **Yes** | — | Comma-separated hostnames Django will serve. E.g., `localhost,127.0.0.1` |
-| `DJANGO_SETTINGS_MODULE` | **Yes** | — | Which settings file to use. `expense_api.settings.development` or `expense_api.settings.production` |
-| `ANTHROPIC_API_KEY` | **Yes** | — | Your Anthropic API key. Get it at [console.anthropic.com](https://console.anthropic.com) |
-| `GOOGLE_API_KEY` | No | — | Required only if using Gemini as the LLM provider |
-| `DEEPSEEK_API_KEY` | No | — | Required only if using DeepSeek as the LLM provider |
-| `DB_ENGINE` | Prod only | — | `django.db.backends.postgresql` |
-| `DB_NAME` | Prod only | — | PostgreSQL database name |
-| `DB_USER` | Prod only | — | PostgreSQL username |
-| `DB_PASSWORD` | Prod only | — | PostgreSQL password |
-| `DB_HOST` | Prod only | — | PostgreSQL host |
-| `DB_PORT` | Prod only | `5432` | PostgreSQL port |
+### Backend (`.env`)
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `SECRET_KEY` | Django secret key | `django-insecure-...` |
+| `ANTHROPIC_API_KEY` | Anthropic API key for Claude | `sk-ant-...` |
+| `GOOGLE_API_KEY` | Google Gemini API key (optional) | `AIza...` |
+| `DEEPSEEK_API_KEY` | DeepSeek API key (optional) | `sk-...` |
+| `LLM_PROVIDER` | Which LLM to use | `anthropic` / `google` / `deepseek` |
+| `DJANGO_SETTINGS_MODULE` | Settings module | `expense_api.settings.development` |
+| `DATABASE_URL` | DB connection string (prod) | `postgres://...` |
+| `ALLOWED_HOSTS` | Comma-separated allowed hosts | `localhost,127.0.0.1` |
+
+### Frontend (`.env.local`)
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `DJANGO_API_URL` | Django server URL (server-side only) | `http://localhost:8000` |
+| `NEXT_PUBLIC_API_BASE_URL` | BFF base URL (client-side) | `/api` |
+| `NEXT_PUBLIC_APP_NAME` | App display name | `DataBrain.AI` |
+
+---
+
+## Additional Documentation
+
+| Document | Location | What It Covers |
+|----------|----------|----------------|
+| Authentication deep-dive | [`docs/authentication.md`](docs/authentication.md) | JWT flow, HttpOnly cookies, custom backend |
+| Database schema | [`docs/database.md`](docs/database.md) | Models, 3-tier JSON schema, migrations |
+| Finance Management REST | [`docs/finance-management.md`](docs/finance-management.md) | Views, serializers, service layer |
+| MCP Server | [`docs/mcp-server.md`](docs/mcp-server.md) | FastMCP, tools, resources, prompts |
+| Agent client | [`docs/agent-client.md`](docs/agent-client.md) | LangGraph, LLM providers, streaming |
+| Async/sync bridge | [`docs/async-sync-django.md`](docs/async-sync-django.md) | `sync_to_async`, event loop safety |
+| Frontend guide (junior devs) | [`frontend/docs/frontend-guide.md`](frontend/docs/frontend-guide.md) | Next.js BFF, TanStack Query, Zustand, virtual table, streaming — explained from first principles |
 
 ---
 
 ## Troubleshooting / FAQ
 
-**Q: The MCP server starts but tools always return "Access denied"**
-The MCP server was not restarted after a code change. Tools are registered at import time — stop the `mcp dev` process with `Ctrl+C` and rerun it.
+**All API calls return 401 after login.**
+The session cookie path must match. Check that `SESSION_COOKIE_PATH=/` in your Django settings, and that `DJANGO_API_URL` in `.env.local` points to the running backend.
 
-**Q: Integer parameters arrive as `0` in MCP tools**
-You are using `param: int = Field(description="...")`. FastMCP passes `FieldInfo` as Pydantic's default, which coerces to `0`. Fix: use `param: Annotated[int, Field(description="...")]` (no default) or `param: Annotated[int, Field(description="...")] = default_value` for optional parameters. See [`docs/mcp-server.md`](docs/mcp-server.md).
+**The agent responds but the table doesn't update.**
+TanStack Query re-fetches on `invalidateQueries`. Confirm the `onFinish` callback in `ChatContainer` is calling `queryClient.invalidateQueries(['tables', selectedTableId, 'content'])`.
 
-**Q: `SynchronousOnlyOperation` error in async views**
-You called a synchronous Django ORM method (`.get()`, `.filter()`, `.save()`) inside an `async def` view or tool without wrapping it. Use `await sync_to_async(lambda: ...)()` or the `aget()`/`asave()` async ORM methods. See [`docs/async-sync-django.md`](docs/async-sync-django.md).
+**Django says `SynchronousOnlyOperation` in the MCP server.**
+You're calling a sync ORM method from an async context without `sync_to_async`. Wrap the call: `await sync_to_async(YourModel.objects.filter(...).first)()`.
 
-**Q: `You cannot call this from an async context` error**
-Same root cause as above — a related object (e.g., `json_table.table.table_name`) was accessed synchronously inside async code. Use `select_related("table")` in the original query so the related object is fetched eagerly in the same DB call.
+**The frontend shows a blank table after creating one.**
+Newly created tables have no rows. The `VirtualTableContainer` shows an `EmptyTableState` when `data.rows` is empty — check that the `useTableContentQuery` is returning the right table ID.
 
-**Q: JWT cookies are set but requests still return 401**
-Check that `CORS_ALLOW_CREDENTIALS = True` is set and that your frontend sends `credentials: "include"` in fetch requests. Also verify `CSRF_TRUSTED_ORIGINS` includes your frontend URL.
+**Streaming stops mid-sentence.**
+The BFF stream route has a 30-second timeout by default. For long agent chains (multiple tool calls), increase the Django `DATA_UPLOAD_MAX_MEMORY_SIZE` and the Next.js edge function timeout.
 
-**Q: `populate() has already been called` on server startup**
-Django's `setup()` was called twice. Remove the `os.environ.setdefault` + `django.setup()` block from any file that isn't the entry point — `mcp_instance.py` already handles this correctly with the `if not apps.ready:` guard.
-
----
-
-## License
-
-MIT License — see [LICENSE](LICENSE) for details.
+**MCP tools receive `user_id=1` instead of the real user.**
+`user_id` is injected via `ContextVar` in `AgentStreamingAPIView`. If you're calling the MCP server directly (outside Django), you must call `_current_user_id.set(real_user_id)` before invoking the tool.
 
 ---
 
 ## Contributing
 
-Contributions are welcome. Please:
-
 1. Fork the repository
-2. Create a feature branch
-3. Submit a pull request with a clear description of the change
+2. Create a feature branch: `git checkout -b feat/your-feature`
+3. Commit with a conventional message: `git commit -m "feat: describe your change"`
+4. Push and open a Pull Request against `main`
+
+**Frontend conventions:** TypeScript strict mode, Tailwind utility classes, TanStack Query for all server state, Zustand for UI-only state, BFF pattern for all API calls.
+
+**Backend conventions:** Service layer for all business logic (never in views), ownership checks on every service method, `sync_to_async` for any ORM call from async context.
+
+---
+
+## Author
+
+**Mehedi Hasan**
+[GitHub](https://github.com/MehediHasan-75) · [LinkedIn](https://www.linkedin.com/in/mehedi-hasan-075379206/) · [Portfolio](https://mehedi0.me/) · [Blog](https://mdmehedi.tech/)
+
+---
+
+## License
+
+[MIT](LICENSE)
