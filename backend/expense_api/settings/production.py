@@ -1,16 +1,11 @@
+import dj_database_url
+
 from .base import *
 
 DEBUG = False
 
 DATABASES = {
-    'default': {
-        'ENGINE': env('DB_ENGINE'),
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
-    }
+    'default': dj_database_url.config(default=env('DATABASE_URL'))
 }
 
 SECURE_HSTS_SECONDS = 31536000
