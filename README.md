@@ -111,51 +111,41 @@ The `onFinish` callback in `ChatContainer` calls `queryClient.invalidateQueries(
 
 ## System Architecture
 
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                      Browser (Next.js 15)                           │
-│                                                                     │
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐  │
-│  │  Landing Page    │  │  /chat (dashboard)│  │  /users          │  │
-│  └──────────────────┘  └────────┬─────────┘  └──────────────────┘  │
-│                                 │                                   │
-│  ┌──────────────────────────────▼──────────────────────────────┐    │
-│  │  TanStack Query (server state) + Zustand uiStore (UI state) │    │
-│  └──────────────────────────────┬──────────────────────────────┘    │
-│                                 │                                   │
-│  ┌──────────────────────────────▼──────────────────────────────┐    │
-│  │          Next.js Route Handlers (BFF)  /api/*               │    │
-│  │   auth/ · tables/ · users/ · chat/stream · notifications/   │    │
-│  └──────────────────────────────┬──────────────────────────────┘    │
-└─────────────────────────────────┼───────────────────────────────────┘
-                                  │ HTTP + HttpOnly cookie forwarding
-┌─────────────────────────────────▼───────────────────────────────────┐
-│                         Django + DRF                                │
-│                                                                     │
-│  ┌──────────────────┐  ┌─────────────────┐  ┌──────────────────┐   │
-│  │  user_auth app   │  │ FinanceManagement│  │   agent app      │   │
-│  │  /auth/*         │  │   /main/*        │  │  /agent/*        │   │
-│  └──────────────────┘  └─────────────────┘  └────────┬─────────┘   │
-│                                                       │             │
-│                              ┌────────────────────────▼──────────┐  │
-│                              │     LangGraph ReAct Agent          │  │
-│                              │  (run_query / stream_query)        │  │
-│                              └────────────────────────┬──────────┘  │
-└───────────────────────────────────────────────────────┼─────────────┘
-                                                         │ MCP tool calls
-┌───────────────────────────────────────────────────────▼─────────────┐
-│                   FastMCP Finance Server                             │
-│   tools.py (10 tools)  resources.py (schema)  prompts.py            │
-│                                                                     │
-│   TableService · RowService · ColumnService · QueryService          │
-│                   sync_to_async bridge                              │
-└───────────────────────────────────────────────────────┬─────────────┘
-                                                         │ ORM queries
-┌───────────────────────────────────────────────────────▼─────────────┐
-│                       SQLite / PostgreSQL                            │
-│   DynamicTableData · JsonTable · JsonTableRow                        │
-│   ChatSession · ChatMessage · UserProfile                            │
-└─────────────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    subgraph Browser["Browser (Next.js 15)"]
+        LP["Landing Page"]
+        CHAT["/chat (dashboard)"]
+        USERS["/users"]
+
+        LP & CHAT & USERS --> TSQ["TanStack Query (server state) + Zustand uiStore (UI state)"]
+        TSQ --> BFF["Next.js Route Handlers (BFF)  /api/*\nauth/ · tables/ · users/ · chat/stream · notifications/"]
+    end
+
+    BFF -->|"HTTP + HttpOnly cookie forwarding"| DJANGO
+
+    subgraph DJANGO["Django + DRF"]
+        AUTH["user_auth app\n/auth/*"]
+        FINANCE["FinanceManagement\n/main/*"]
+        AGENT_APP["agent app\n/agent/*"]
+
+        AGENT_APP --> REACT["LangGraph ReAct Agent\n(run_query / stream_query)"]
+    end
+
+    REACT -->|"MCP tool calls"| MCP
+
+    subgraph MCP["FastMCP Finance Server"]
+        TOOLS["tools.py (10 tools)  ·  resources.py (schema)  ·  prompts.py"]
+        SERVICES["TableService · RowService · ColumnService · QueryService"]
+        BRIDGE["sync_to_async bridge"]
+        TOOLS --> SERVICES --> BRIDGE
+    end
+
+    BRIDGE -->|"ORM queries"| DB
+
+    subgraph DB["SQLite / PostgreSQL"]
+        MODELS["DynamicTableData · JsonTable · JsonTableRow\nChatSession · ChatMessage · UserProfile"]
+    end
 ```
 
 **Two paths to the same data:**
