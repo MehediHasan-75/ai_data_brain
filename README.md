@@ -383,6 +383,7 @@ ai_data_brain/
 | [`docs/async-sync-django.md`](docs/async-sync-django.md) | Why Django ORM is sync, `sync_to_async`, `async for`, the async/sync bridge pattern |
 | [`docs/mcp-server.md`](docs/mcp-server.md) | What MCP is, FastMCP, tool parameters (the `Annotated` fix), resources, prompts |
 | [`docs/agent-client.md`](docs/agent-client.md) | LangGraph ReAct agent, LLM providers, streaming, the full query lifecycle |
+| [`docs/frontend-guide.md`](docs/frontend-guide.md) | Next.js 15 + React 19 frontend: setup, API client, contexts, reducers, components, implementation order |
 
 ---
 
