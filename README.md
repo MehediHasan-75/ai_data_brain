@@ -113,36 +113,39 @@ The `onFinish` callback in `ChatContainer` calls `queryClient.invalidateQueries(
 
 ```mermaid
 flowchart TD
-    subgraph Browser["Browser — Next.js 15"]
-        PAGES["Landing Page · /chat · /users"]
-        STATE["TanStack Query + Zustand uiStore"]
-        BFF["Next.js BFF — /api/auth · /api/tables · /api/users · /api/chat/stream"]
-        PAGES --> STATE --> BFF
-    end
+    A["Browser — Next.js 15\nLanding · /chat · /users"]
+    B["TanStack Query  +  Zustand uiStore"]
+    C["Next.js BFF  /api/*\nauth · tables · users · chat/stream · notifications"]
+    D["Django + DRF\nuser_auth  ·  FinanceManagement  ·  agent app"]
+    E["LangGraph ReAct Agent\nrun_query  ·  stream_query"]
+    F["FastMCP Finance Server\n10 tools  ·  resources.py  ·  prompts.py"]
+    G["Service Layer  +  sync_to_async bridge\nTableService  ·  RowService  ·  ColumnService"]
+    H["SQLite / PostgreSQL\nDynamicTableData  ·  JsonTable  ·  ChatSession  ·  UserProfile"]
 
-    BFF -->|"HTTP + HttpOnly cookie forwarding"| DJANGO
+    A --> B --> C
+    C -->|"HTTP + HttpOnly cookies"| D
+    D --> E
+    E -->|"MCP tool calls"| F
+    F --> G
+    G -->|"ORM queries"| H
 
-    subgraph DJANGO["Django + DRF"]
-        AUTH["user_auth  /auth/*"]
-        MAIN["FinanceManagement  /main/*"]
-        AGENT["agent app  /agent/*"]
-        AGENT --> REACT["LangGraph ReAct Agent  —  run_query / stream_query"]
-    end
+    classDef frontend fill:#1d4ed8,stroke:#3b82f6,color:#fff,rx:6
+    classDef state    fill:#0369a1,stroke:#38bdf8,color:#fff,rx:6
+    classDef bff      fill:#0e7490,stroke:#22d3ee,color:#fff,rx:6
+    classDef django   fill:#166534,stroke:#4ade80,color:#fff,rx:6
+    classDef agent    fill:#6d28d9,stroke:#a78bfa,color:#fff,rx:6
+    classDef mcp      fill:#92400e,stroke:#fbbf24,color:#fff,rx:6
+    classDef services fill:#9a3412,stroke:#fb923c,color:#fff,rx:6
+    classDef db       fill:#1f2937,stroke:#9ca3af,color:#fff,rx:6
 
-    REACT -->|"MCP tool calls"| FASTMCP
-
-    subgraph FASTMCP["FastMCP Finance Server"]
-        TOOLS["tools.py  ·  resources.py  ·  prompts.py"]
-        SVC["TableService  ·  RowService  ·  ColumnService  ·  QueryService"]
-        BRIDGE["sync_to_async bridge"]
-        TOOLS --> SVC --> BRIDGE
-    end
-
-    BRIDGE -->|"ORM queries"| DB
-
-    subgraph DB["SQLite / PostgreSQL"]
-        MODELS["DynamicTableData  ·  JsonTable  ·  JsonTableRow  ·  ChatSession  ·  UserProfile"]
-    end
+    class A frontend
+    class B state
+    class C bff
+    class D django
+    class E agent
+    class F mcp
+    class G services
+    class H db
 ```
 
 **Two paths to the same data:**
@@ -471,10 +474,16 @@ The BFF stream route has a 30-second timeout by default. For long agent chains (
 
 ---
 
-## Author
+## Authors
 
 **Mehedi Hasan**
 [GitHub](https://github.com/MehediHasan-75) · [LinkedIn](https://www.linkedin.com/in/mehedi-hasan-075379206/) · [Portfolio](https://mehedi0.me/) · [Blog](https://mdmehedi.tech/)
+
+**MD KHALED BIN**
+[GitHub](https://github.com/mdkhaledbin)
+
+**Al Fahad**
+[GitHub](https://github.com/MD-Al-Fahad)
 
 ---
 
