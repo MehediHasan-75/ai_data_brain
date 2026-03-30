@@ -354,7 +354,7 @@ ai_data_brain/
 │   ├── agent-client.md
 │   ├── mcp-server.md
 │   ├── async-sync-django.md
-│   └── frontend-guide.md
+│   └── frontend-nextjs-tanstack-guide.md
 │
 └── AI_Data_Brain.postman_collection.json
 ```
@@ -435,7 +435,7 @@ ai_data_brain/
 | MCP Server | [`docs/mcp-server.md`](docs/mcp-server.md) | FastMCP, tools, resources, prompts |
 | Agent client | [`docs/agent-client.md`](docs/agent-client.md) | LangGraph, LLM providers, streaming |
 | Async/sync bridge | [`docs/async-sync-django.md`](docs/async-sync-django.md) | `sync_to_async`, event loop safety |
-| Frontend guide (junior devs) | [`frontend/docs/frontend-guide.md`](frontend/docs/frontend-guide.md) | Next.js BFF, TanStack Query, Zustand, virtual table, streaming — explained from first principles |
+| Frontend guide (junior devs) | [`docs/frontend-nextjs-tanstack-guide.md`](docs/frontend-nextjs-tanstack-guide.md) | Next.js BFF, TanStack Query, Zustand, virtual table, streaming — explained from first principles |
 
 ---
 
