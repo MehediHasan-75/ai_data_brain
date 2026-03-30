@@ -3,7 +3,8 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/context/ThemeProvider";
-import { UserProvider } from "@/context/AuthProvider"; // Update this import
+import { UserProvider } from "@/context/AuthProvider";
+import { ReactQueryProvider } from "@/components/ReactQueryProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,18 +32,18 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {/* Create a client component wrapper */}
         <Providers>{children}</Providers>
       </body>
     </html>
   );
 }
 
-// Create a separate client component to wrap the providers
 function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <UserProvider>
-      <ThemeProvider>{children}</ThemeProvider>
-    </UserProvider>
+    <ThemeProvider>
+      <ReactQueryProvider>
+        <UserProvider>{children}</UserProvider>
+      </ReactQueryProvider>
+    </ThemeProvider>
   );
 }

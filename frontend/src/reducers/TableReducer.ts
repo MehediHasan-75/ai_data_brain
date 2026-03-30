@@ -32,7 +32,7 @@ export const TableReducer = (
     case "SET_TABLES": {
       console.log("at tablereducer set table: ", action.payload);
 
-      return [...action.payload.data];
+      return [...action.payload];
     }
     case "ADD_TABLE": {
       return [
@@ -45,7 +45,10 @@ export const TableReducer = (
           modified_at: new Date().toISOString(),
           description: action.payload.description,
           pendingCount: 0,
-        },
+          is_shared: false,
+          owner: { id: 0, username: "" },
+          shared_with: [],
+        } as TableDataType,
       ].sort(
         (a, b) =>
           new Date(b.modified_at).getTime() - new Date(a.modified_at).getTime()

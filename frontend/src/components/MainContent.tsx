@@ -1,6 +1,6 @@
 import React from "react";
-import ChatArea from "./chat/ChatAreaReal"; //use ChatAreaReal after integration of Api
-import ShowTable from "./MainComponents/ShowTable";
+import ChatContainer from "@/features/chat/components/ChatContainer";
+import VirtualTableContainer from "@/features/tables/components/VirtualTableContainer";
 import { useTheme } from "@/context/ThemeProvider";
 
 const MainContent = ({ showChat }: { showChat: boolean }) => {
@@ -22,36 +22,30 @@ const MainContent = ({ showChat }: { showChat: boolean }) => {
           <div
             className={`${
               showChat
-                ? "hidden lg:block translate-x-0"
-                : "-translate-x-full lg:translate-x-0"
-            } py-6 lg:py-10 h-screen overflow-hidden transition-all duration-500 ease-in-out transform ${
-              showChat ? "translate-x-0" : "-translate-x-full"
-            }`}
+                ? "hidden lg:flex translate-x-0"
+                : "flex -translate-x-full lg:translate-x-0"
+            } flex-col py-6 lg:py-10 h-screen overflow-hidden transition-all duration-500 ease-in-out transform`}
           >
-            <ShowTable />
+            <VirtualTableContainer />
           </div>
         </div>
       </div>
 
-      {/* Chat Area - conditionally rendered and responsive */}
+      {/* Chat Area */}
       {showChat && (
         <>
-          {/* Mobile overlay backdrop */}
-          <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-0 transition-opacity duration-500 ease-in-out" />
-
+          <div className="lg:hidden fixed inset-0 bg-black/50 z-0 transition-opacity duration-500 ease-in-out" />
           <div
             className={`fixed lg:relative inset-0 lg:inset-auto lg:w-2/5 z-10 ${
               theme === "dark" ? "bg-gray-800" : "bg-white"
-            } shadow-xl lg:shadow-none transition-all duration-500 ease-in-out transform ${
-              showChat ? "translate-x-0" : "translate-x-full"
-            }`}
+            } shadow-xl lg:shadow-none transition-all duration-500 ease-in-out`}
           >
             <div
               className={`h-full flex flex-col border-l ${
                 theme === "dark" ? "border-gray-700" : "border-gray-200"
               } transition-colors duration-500 ease-in-out`}
             >
-              <ChatArea />
+              <ChatContainer />
             </div>
           </div>
         </>

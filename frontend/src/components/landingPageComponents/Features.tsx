@@ -86,7 +86,7 @@ const Features = () => {
             <div
               key={feature.title}
               className={clsx(
-                "p-6 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 flex flex-col items-start text-left border",
+                "p-6 rounded-xl border flex flex-col items-start text-left transition-colors",
                 theme === "dark"
                   ? "bg-gray-700 border-gray-600 hover:border-blue-500"
                   : "bg-gray-50 border-gray-200 hover:border-blue-300"

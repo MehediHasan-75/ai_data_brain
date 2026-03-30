@@ -25,13 +25,12 @@ const Navbar = () => {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ name?: string; username?: string } | null>(null);
   const router = useRouter();
   const pathname = usePathname();
   const { signOut } = useUser();
 
   useEffect(() => {
-    // Check if user is logged in
     const userData = localStorage.getItem("user");
     if (userData) {
       setUser(JSON.parse(userData));
@@ -39,33 +38,21 @@ const Navbar = () => {
     }
   }, []);
 
-  const toggleMobileMenu = () => {
-    setIsMobileMenuOpen((prev) => !prev);
-  };
+  const toggleMobileMenu = () => setIsMobileMenuOpen((prev) => !prev);
 
   const handleChatClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!isLoggedIn) {
-      router.push("/signin");
-    } else {
-      router.push("/chat");
-    }
+    router.push(isLoggedIn ? "/chat" : "/signin");
   };
 
   const handleFriendsClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (!isLoggedIn) {
-      router.push("/signin");
-    } else {
-      router.push("/users");
-    }
+    router.push(isLoggedIn ? "/users" : "/signin");
   };
 
   const handleLogoClick = (e: React.MouseEvent) => {
     e.preventDefault();
-    if (pathname !== "/") {
-      router.push("/");
-    }
+    if (pathname !== "/") router.push("/");
   };
 
   const handleSignOut = () => {
@@ -73,124 +60,118 @@ const Navbar = () => {
     setShowUserMenu(false);
     localStorage.removeItem("user");
     setIsLoggedIn(false);
-    setShowUserMenu(false);
     router.push("/");
   };
 
-  const linkStyle = clsx(
-    "font-medium transition-colors",
+  const linkClass = clsx(
+    "text-sm font-medium transition-colors",
     theme === "dark"
       ? "text-gray-300 hover:text-white"
-      : "text-gray-600 hover:text-blue-600"
+      : "text-gray-600 hover:text-gray-900"
+  );
+
+  const dropdownItemClass = clsx(
+    "flex items-center w-full px-4 py-2 text-sm transition-colors",
+    theme === "dark"
+      ? "text-gray-300 hover:bg-gray-700 hover:text-white"
+      : "text-gray-700 hover:bg-gray-50"
   );
 
   return (
     <nav
       className={clsx(
-        "w-full fixed top-0 z-50 shadow-sm transition-colors duration-300",
-        theme === "dark" ? "bg-gray-900" : "bg-white"
+        "w-full fixed top-0 z-50 border-b transition-colors",
+        theme === "dark"
+          ? "bg-gray-900 border-gray-800"
+          : "bg-white border-gray-200"
       )}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center py-4">
-          {/* Logo */}
+        <div className="flex justify-between items-center h-16">
           <button
             onClick={handleLogoClick}
             className={clsx(
-              "text-3xl font-bold",
-              theme === "dark" ? "text-white" : "text-blue-600",
-              pathname === "/"
-                ? "cursor-default"
-                : "cursor-pointer hover:opacity-80"
+              "flex items-center gap-2",
+              pathname === "/" ? "cursor-default" : "cursor-pointer"
             )}
           >
             <Image
               src="/databrain_log.png"
               alt="Logo"
-              width={50}
-              height={50}
-              className="inline-block"
+              width={32}
+              height={32}
+              className="shrink-0"
             />
-            <div
-              className={`ml-2 hidden md:inline-block text-2xl font-bold transition-colors duration-500 ease-in-out bg-clip-text text-transparent ${
-                theme === "dark"
-                  ? "bg-linear-to-r from-purple-400 via-pink-500 to-red-500"
-                  : "bg-linear-to-r from-blue-400 via-green-400 to-yellow-400"
-              }`}
+            <span
+              className={clsx(
+                "hidden md:inline-block text-base font-semibold",
+                theme === "dark" ? "text-white" : "text-gray-900"
+              )}
             >
               {process.env.NEXT_PUBLIC_APP_NAME || "DataBrain.AI"}
-            </div>
+            </span>
           </button>
 
           {/* Desktop Menu */}
-          <div className="hidden md:flex items-center space-x-6">
+          <div className="hidden md:flex items-center gap-5">
             {!isLoggedIn ? (
               <>
-                <a href="#features" className={linkStyle}>
+                <a href="#features" className={linkClass}>
                   Features
                 </a>
-                <a href="#why-us" className={linkStyle}>
+                <a href="#why-us" className={linkClass}>
                   Why Us
                 </a>
                 <button
                   onClick={() => router.push("/signin")}
-                  className={clsx(
-                    "px-6 py-2 rounded-md transition-colors font-medium",
-                    "bg-blue-600 text-white hover:bg-blue-700"
-                  )}
+                  className="px-4 py-1.5 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 transition-colors"
                 >
                   Sign In
                 </button>
               </>
             ) : (
               <>
-                {/* Friends Link */}
                 {pathname !== "/users" && (
                   <button
                     onClick={handleFriendsClick}
-                    className={clsx("flex items-center space-x-1", linkStyle)}
+                    className={clsx("flex items-center gap-1.5", linkClass)}
                   >
-                    <FiUsers size={18} />
+                    <FiUsers size={16} />
                     <span>Friends</span>
                   </button>
                 )}
 
-                {/* Chat Link */}
                 {pathname !== "/chat" && (
                   <button
                     onClick={handleChatClick}
-                    className={clsx("flex items-center space-x-1", linkStyle)}
+                    className={clsx("flex items-center gap-1.5", linkClass)}
                   >
-                    <FiMessageSquare size={18} />
+                    <FiMessageSquare size={16} />
                     <span>Chat</span>
                   </button>
                 )}
 
-                {/* Theme Toggle */}
                 <button
                   onClick={toggleTheme}
                   className={clsx(
-                    "p-2 rounded-full transition-colors",
-                    theme === "dark" ? "text-yellow-400" : "text-blue-600"
+                    "p-1.5 rounded-md transition-colors",
+                    theme === "dark"
+                      ? "text-gray-300 hover:bg-gray-800"
+                      : "text-gray-600 hover:bg-gray-100"
                   )}
                   aria-label="Toggle Theme"
                 >
-                  {theme === "dark" ? (
-                    <FiSun size={20} />
-                  ) : (
-                    <FiMoon size={20} />
-                  )}
+                  {theme === "dark" ? <FiSun size={18} /> : <FiMoon size={18} />}
                 </button>
 
-                {/* User Menu */}
                 <div className="relative">
                   <button
                     onClick={() => setShowUserMenu(!showUserMenu)}
                     className={clsx(
-                      "flex items-center space-x-2 px-3 py-2 rounded-lg transition-all duration-300",
+                      "flex items-center gap-2 px-3 py-1.5 rounded-md text-sm transition-colors",
                       theme === "dark"
-                        ? "bg-gray-800 text-white hover:bg-gray-700"
-                        : "bg-gray-100 text-gray-900 hover:bg-gray-200"
+                        ? "text-gray-300 hover:bg-gray-800"
+                        : "text-gray-700 hover:bg-gray-100"
                     )}
                   >
                     <span className="font-medium">
@@ -198,14 +179,13 @@ const Navbar = () => {
                     </span>
                   </button>
 
-                  {/* User Dropdown Menu */}
                   {showUserMenu && (
                     <div
                       className={clsx(
-                        "absolute right-0 mt-2 w-48 rounded-lg shadow-lg py-1 z-50",
+                        "absolute right-0 mt-1 w-48 rounded-md shadow-lg border py-1 z-50",
                         theme === "dark"
-                          ? "bg-gray-800 border border-gray-700"
-                          : "bg-white border border-gray-200"
+                          ? "bg-gray-800 border-gray-700"
+                          : "bg-white border-gray-200"
                       )}
                     >
                       <button
@@ -213,52 +193,20 @@ const Navbar = () => {
                           setIsSettingsOpen(true);
                           setShowUserMenu(false);
                         }}
-                        className={clsx(
-                          "flex items-center w-full px-4 py-2 text-sm",
-                          theme === "dark"
-                            ? "text-gray-300 hover:bg-gray-700 hover:text-white"
-                            : "text-gray-700 hover:bg-gray-100"
-                        )}
+                        className={dropdownItemClass}
                       >
                         <FiSettings className="mr-3 h-4 w-4" />
                         Settings
                       </button>
-
-                      <button
-                        onClick={handleChatClick}
-                        className={clsx(
-                          "flex items-center w-full px-4 py-2 text-sm",
-                          theme === "dark"
-                            ? "text-gray-300 hover:bg-gray-700 hover:text-white"
-                            : "text-gray-700 hover:bg-gray-100"
-                        )}
-                      >
+                      <button onClick={handleChatClick} className={dropdownItemClass}>
                         <FiMessageSquare className="mr-3 h-4 w-4" />
                         Chat
                       </button>
-
-                      <button
-                        onClick={handleFriendsClick}
-                        className={clsx(
-                          "flex items-center w-full px-4 py-2 text-sm",
-                          theme === "dark"
-                            ? "text-gray-300 hover:bg-gray-700 hover:text-white"
-                            : "text-gray-700 hover:bg-gray-100"
-                        )}
-                      >
+                      <button onClick={handleFriendsClick} className={dropdownItemClass}>
                         <FiUsers className="mr-3 h-4 w-4" />
                         Friends
                       </button>
-
-                      <button
-                        onClick={handleSignOut}
-                        className={clsx(
-                          "flex items-center w-full px-4 py-2 text-sm",
-                          theme === "dark"
-                            ? "text-gray-300 hover:bg-gray-700 hover:text-white"
-                            : "text-gray-700 hover:bg-gray-100"
-                        )}
-                      >
+                      <button onClick={handleSignOut} className={dropdownItemClass}>
                         <FiLogOut className="mr-3 h-4 w-4" />
                         Sign Out
                       </button>
@@ -269,30 +217,30 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Menu Toggle */}
-          <div className="md:hidden flex items-center space-x-3">
-            {/* Theme Toggle */}
+          {/* Mobile Controls */}
+          <div className="md:hidden flex items-center gap-2">
             <button
               onClick={toggleTheme}
               className={clsx(
-                "p-2 rounded-full transition-colors",
-                theme === "dark" ? "text-yellow-400" : "text-blue-600"
+                "p-1.5 rounded-md transition-colors",
+                theme === "dark"
+                  ? "text-gray-300 hover:bg-gray-800"
+                  : "text-gray-600 hover:bg-gray-100"
               )}
               aria-label="Toggle Theme"
             >
-              {theme === "dark" ? <FiSun size={20} /> : <FiMoon size={20} />}
+              {theme === "dark" ? <FiSun size={18} /> : <FiMoon size={18} />}
             </button>
 
-            {/* User Menu for Mobile */}
             {isLoggedIn && (
               <div className="relative">
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
                   className={clsx(
-                    "flex items-center space-x-2 px-3 py-2 rounded-lg",
+                    "flex items-center px-2 py-1.5 rounded-md text-sm",
                     theme === "dark"
-                      ? "bg-gray-800 text-white"
-                      : "bg-gray-100 text-gray-900"
+                      ? "text-gray-300 hover:bg-gray-800"
+                      : "text-gray-700 hover:bg-gray-100"
                   )}
                 >
                   <span className="font-medium">
@@ -300,68 +248,34 @@ const Navbar = () => {
                   </span>
                 </button>
 
-                {/* Mobile User Dropdown Menu */}
                 {showUserMenu && (
                   <div
                     className={clsx(
-                      "absolute right-0 mt-2 w-48 rounded-lg shadow-lg py-1 z-50",
+                      "absolute right-0 mt-1 w-48 rounded-md shadow-lg border py-1 z-50",
                       theme === "dark"
-                        ? "bg-gray-800 border border-gray-700"
-                        : "bg-white border border-gray-200"
+                        ? "bg-gray-800 border-gray-700"
+                        : "bg-white border-gray-200"
                     )}
                   >
-                    {/* Same dropdown menu items as desktop */}
                     <button
                       onClick={() => {
                         setIsSettingsOpen(true);
                         setShowUserMenu(false);
                       }}
-                      className={clsx(
-                        "flex items-center w-full px-4 py-2 text-sm",
-                        theme === "dark"
-                          ? "text-gray-300 hover:bg-gray-700 hover:text-white"
-                          : "text-gray-700 hover:bg-gray-100"
-                      )}
+                      className={dropdownItemClass}
                     >
                       <FiSettings className="mr-3 h-4 w-4" />
                       Settings
                     </button>
-
-                    <button
-                      onClick={handleChatClick}
-                      className={clsx(
-                        "flex items-center w-full px-4 py-2 text-sm",
-                        theme === "dark"
-                          ? "text-gray-300 hover:bg-gray-700 hover:text-white"
-                          : "text-gray-700 hover:bg-gray-100"
-                      )}
-                    >
+                    <button onClick={handleChatClick} className={dropdownItemClass}>
                       <FiMessageSquare className="mr-3 h-4 w-4" />
                       Chat
                     </button>
-
-                    <button
-                      onClick={handleFriendsClick}
-                      className={clsx(
-                        "flex items-center w-full px-4 py-2 text-sm",
-                        theme === "dark"
-                          ? "text-gray-300 hover:bg-gray-700 hover:text-white"
-                          : "text-gray-700 hover:bg-gray-100"
-                      )}
-                    >
+                    <button onClick={handleFriendsClick} className={dropdownItemClass}>
                       <FiUsers className="mr-3 h-4 w-4" />
                       Friends
                     </button>
-
-                    <button
-                      onClick={handleSignOut}
-                      className={clsx(
-                        "flex items-center w-full px-4 py-2 text-sm",
-                        theme === "dark"
-                          ? "text-gray-300 hover:bg-gray-700 hover:text-white"
-                          : "text-gray-700 hover:bg-gray-100"
-                      )}
-                    >
+                    <button onClick={handleSignOut} className={dropdownItemClass}>
                       <FiLogOut className="mr-3 h-4 w-4" />
                       Sign Out
                     </button>
@@ -373,46 +287,40 @@ const Navbar = () => {
             <button
               onClick={toggleMobileMenu}
               className={clsx(
-                "p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2",
+                "p-1.5 rounded-md",
                 theme === "dark"
-                  ? "text-gray-300 hover:text-white focus:ring-gray-700"
-                  : "text-gray-600 hover:text-blue-600 focus:ring-blue-300"
+                  ? "text-gray-300 hover:bg-gray-800"
+                  : "text-gray-600 hover:bg-gray-100"
               )}
               aria-label="Toggle Menu"
             >
-              {isMobileMenuOpen ? <FiX size={24} /> : <FiMenu size={24} />}
+              {isMobileMenuOpen ? <FiX size={20} /> : <FiMenu size={20} />}
             </button>
           </div>
         </div>
       </div>
 
-      {/* Mobile Menu Drawer */}
+      {/* Mobile Drawer */}
       {isMobileMenuOpen && (
         <div
           className={clsx(
-            "md:hidden px-4 pb-4 space-y-2 transition-all duration-300",
+            "md:hidden border-t px-4 pb-4 pt-2 space-y-1",
             theme === "dark"
-              ? "bg-gray-900 text-gray-300"
-              : "bg-white text-gray-700"
+              ? "bg-gray-900 border-gray-800 text-gray-300"
+              : "bg-white border-gray-200 text-gray-700"
           )}
         >
           {!isLoggedIn ? (
             <>
-              <a
-                href="#features"
-                className="block py-2 border-b border-gray-200"
-              >
+              <a href="#features" className="block py-2 text-sm">
                 Features
               </a>
-              <a href="#why-us" className="block py-2 border-b border-gray-200">
+              <a href="#why-us" className="block py-2 text-sm">
                 Why Us
               </a>
               <button
                 onClick={() => router.push("/signin")}
-                className={clsx(
-                  "block w-full text-center px-4 py-2 rounded-md font-medium mt-2",
-                  "bg-blue-600 text-white hover:bg-blue-700"
-                )}
+                className="block w-full text-left px-4 py-2 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700 mt-1"
               >
                 Sign In
               </button>
@@ -422,18 +330,18 @@ const Navbar = () => {
               {pathname !== "/users" && (
                 <button
                   onClick={handleFriendsClick}
-                  className="flex items-center space-x-2 py-2 border-b border-gray-200 w-full text-left"
+                  className="flex items-center gap-2 py-2 text-sm w-full"
                 >
-                  <FiUsers size={18} />
+                  <FiUsers size={16} />
                   <span>Friends</span>
                 </button>
               )}
               {pathname !== "/chat" && (
                 <button
                   onClick={handleChatClick}
-                  className="flex items-center space-x-2 py-2 border-b border-gray-200 w-full text-left"
+                  className="flex items-center gap-2 py-2 text-sm w-full"
                 >
-                  <FiMessageSquare size={18} />
+                  <FiMessageSquare size={16} />
                   <span>Chat</span>
                 </button>
               )}
@@ -442,7 +350,13 @@ const Navbar = () => {
         </div>
       )}
 
-      {/* Settings Modal */}
+      {showUserMenu && (
+        <div
+          className="fixed inset-0 z-40"
+          onClick={() => setShowUserMenu(false)}
+        />
+      )}
+
       <SettingsModal
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}

@@ -1,14 +1,12 @@
-// context/UserContext.tsx
+// context/AuthProvider.tsx
 "use client";
 import React, {
   createContext,
-  useState,
-  useEffect,
   useContext,
   ReactNode,
   useCallback,
 } from "react";
-import { getSelfDetail, updateAccessToken, logoutUser } from "@/api/AuthApi";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 
 export interface User {
@@ -16,7 +14,6 @@ export interface User {
   username: string;
   email: string;
   name?: string;
-  // Add other user fields as needed
 }
 
 export interface UserContextType {
@@ -27,96 +24,59 @@ export interface UserContextType {
   signOut: () => Promise<void>;
 }
 
-export const UserContext = createContext<UserContextType | undefined>(
-  undefined
-);
+export const UserContext = createContext<UserContextType | undefined>(undefined);
 
-const TOKEN_REFRESH_INTERVAL = 4 * 60 * 1000; // 4 minutes in milliseconds
+async function fetchCurrentUser(): Promise<User | null> {
+  const res = await fetch("/api/auth/me", { credentials: "include" });
+  if (res.status === 401 || res.status === 403) return null;
+  if (!res.ok) return null;
+  const data = await res.json();
+  // Django /auth/me/ returns the user object directly
+  return data?.id ? (data as User) : null;
+}
+
+async function callLogout(): Promise<void> {
+  await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+}
 
 export const UserProvider = ({ children }: { children: ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const router = useRouter();
 
-  const handleTokenExpiration = useCallback(() => {
-    // Remove all user-related data from localStorage
-    localStorage.removeItem("user");
-    localStorage.removeItem("user_data");
-    setUser(null);
-    router.push("/signin");
-  }, [router]);
+  const { data: user, isLoading: loading } = useQuery<User | null>({
+    queryKey: ["user"],
+    queryFn: fetchCurrentUser,
+    staleTime: 4 * 60 * 1000, // 4 minutes — aligns with Django token TTL
+    refetchInterval: 4 * 60 * 1000,
+    retry: 1,
+  });
 
   const refreshUser = useCallback(async () => {
-    const existingUser = localStorage.getItem("user");
-    
-    if (!existingUser && window.location.pathname !== "/signin") {
-      setLoading(false);
-      return;
-    }
+    await queryClient.invalidateQueries({ queryKey: ["user"] });
+  }, [queryClient]);
 
-    // if (!existingUser) {
-    //   return;
-    // }
-
-    try {
-      const userData = await getSelfDetail();
-      if (userData.success && userData.data) {
-        localStorage.setItem("user", JSON.stringify(userData.data));
-        setUser(userData.data);
-      } else {
-        throw new Error("User data is invalid");
-      }
-    } catch (error) {
-      console.error("Failed to get user info:", error);
-      handleTokenExpiration();
-    } finally {
-      setLoading(false);
-    }
-  }, [handleTokenExpiration]);
-
-  const refreshToken = useCallback(async () => {
-    try {
-      const response = await updateAccessToken();
-      if (!response.success) {
-        throw new Error("Failed to refresh token");
-      }
-    } catch (error) {
-      console.error("Token refresh failed:", error);
-      handleTokenExpiration();
-    }
-  }, [handleTokenExpiration]);
+  const setUser = useCallback(
+    (u: User | null) => {
+      queryClient.setQueryData(["user"], u);
+    },
+    [queryClient]
+  );
 
   const signOut = useCallback(async () => {
     try {
-      const response = await logoutUser();
-      if (!response.success) {
-        throw new Error(response.error || "Logout failed");
-      }
-    } catch (error) {
-      console.error("Logout failed:", error);
+      await callLogout();
+    } catch {
+      // best-effort
     } finally {
-      // Always clear user data and redirect, even if the API call fails
-      handleTokenExpiration();
+      queryClient.setQueryData(["user"], null);
+      queryClient.clear();
+      router.push("/signin");
     }
-  }, [handleTokenExpiration]);
-
-  // Initial user data fetch
-  useEffect(() => {
-    refreshUser();
-  }, [refreshUser]);
-
-  // Periodic token refresh
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      refreshToken();
-    }, TOKEN_REFRESH_INTERVAL);
-
-    return () => clearInterval(intervalId);
-  }, [refreshToken]);
+  }, [queryClient, router]);
 
   return (
     <UserContext.Provider
-      value={{ user, setUser, refreshUser, loading, signOut }}
+      value={{ user: user ?? null, setUser, refreshUser, loading, signOut }}
     >
       {children}
     </UserContext.Provider>

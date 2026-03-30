@@ -29,10 +29,7 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
 
-  // Check if user is logged in
-  const isLoggedIn = () => {
-    return localStorage.getItem("user") !== null;
-  };
+  const isLoggedIn = () => localStorage.getItem("user") !== null;
 
   useEffect(() => {
     const fetchUserDetails = async () => {
@@ -95,12 +92,9 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
       });
 
       if (response.success) {
-        // Call getSelfDetail to update user data everywhere
         const userData = await getSelfDetail();
         if (userData.success && userData.data) {
-          // Update localStorage with new user data
           localStorage.setItem("user", JSON.stringify(userData.data));
-          // Update user context
           setUser(userData.data);
         }
 
@@ -108,11 +102,7 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           type: "success",
           text: response.data.message || "Profile updated successfully",
         });
-        // Clear password field
-        setFormData((prev) => ({
-          ...prev,
-          currentPassword: "",
-        }));
+        setFormData((prev) => ({ ...prev, currentPassword: "" }));
       } else {
         setMessage({
           type: "error",
@@ -152,7 +142,6 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
           type: "success",
           text: response.data.message || "Password updated successfully",
         });
-        // Clear password fields
         setFormData((prev) => ({
           ...prev,
           currentPassword: "",
@@ -177,52 +166,54 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
 
   if (!isOpen) return null;
 
+  const inputClass = `w-full pl-10 pr-4 py-2 rounded-md border text-sm transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+    theme === "dark"
+      ? "bg-gray-800 border-gray-700 text-white"
+      : "bg-white border-gray-300 text-gray-900"
+  }`;
+
+  const labelClass = `block text-xs font-medium mb-1.5 ${
+    theme === "dark" ? "text-gray-400" : "text-gray-600"
+  }`;
+
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center w-screen h-screen">
-      {/* Overlay */}
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center">
       <div
-        className={`fixed inset-0 bg-black/50 backdrop-blur-sm transition-all duration-300 ease-in-out ${
-          isOpen ? "opacity-100" : "opacity-0"
-        }`}
+        className="fixed inset-0 bg-black/50"
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Modal */}
       <div
-        className={`fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl mx-4 rounded-xl shadow-2xl transition-all duration-300 ease-in-out transform ${
+        className={`relative w-full max-w-lg mx-4 rounded-xl shadow-xl ${
           theme === "dark" ? "bg-gray-900 text-white" : "bg-white text-gray-900"
-        } ${isOpen ? "opacity-100 scale-100" : "opacity-0 scale-95"}`}
+        }`}
       >
-        {/* Header */}
         <div
-          className={`flex items-center justify-between p-6 border-b ${
+          className={`flex items-center justify-between px-6 py-4 border-b ${
             theme === "dark" ? "border-gray-800" : "border-gray-200"
           }`}
         >
-          <h2 className="text-2xl font-bold bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-            Settings
-          </h2>
+          <h2 className="text-lg font-semibold">Settings</h2>
           <button
             onClick={onClose}
-            className={`p-2 rounded-lg transition-all duration-300 ${
+            className={`p-1.5 rounded-md transition-colors ${
               theme === "dark"
-                ? "hover:bg-gray-800 text-gray-400 hover:text-white"
-                : "hover:bg-gray-100 text-gray-500 hover:text-gray-900"
+                ? "text-gray-400 hover:bg-gray-800 hover:text-white"
+                : "text-gray-500 hover:bg-gray-100 hover:text-gray-900"
             }`}
           >
-            <HiX size={24} />
+            <HiX size={20} />
           </button>
         </div>
 
-        {/* Content */}
         <div className="p-6">
           {message.text && (
             <div
-              className={`mb-4 p-4 rounded-lg ${
+              className={`mb-4 p-3 rounded-md text-sm border ${
                 message.type === "error"
-                  ? "bg-red-100 text-red-700"
-                  : "bg-green-100 text-green-700"
+                  ? "bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800"
+                  : "bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300 border-green-200 dark:border-green-800"
               }`}
             >
               {message.text}
@@ -231,255 +222,146 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
 
           {isLoggedIn() ? (
             <>
-              {/* Tabs */}
               <div
-                className={`flex border-b ${
+                className={`flex border-b mb-6 ${
                   theme === "dark" ? "border-gray-800" : "border-gray-200"
                 }`}
               >
-                <button
-                  onClick={() => setActiveTab("profile")}
-                  className={`flex-1 py-4 text-center font-medium transition-all duration-300 ${
-                    activeTab === "profile"
-                      ? theme === "dark"
-                        ? "bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent border-b-2 border-blue-500"
-                        : "bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent border-b-2 border-blue-600"
-                      : theme === "dark"
-                      ? "text-gray-400 hover:text-white"
-                      : "text-gray-500 hover:text-gray-900"
-                  }`}
-                >
-                  Profile
-                </button>
-                <button
-                  onClick={() => setActiveTab("security")}
-                  className={`flex-1 py-4 text-center font-medium transition-all duration-300 ${
-                    activeTab === "security"
-                      ? theme === "dark"
-                        ? "bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent border-b-2 border-blue-500"
-                        : "bg-gradient-to-r from-blue-600 to-purple-700 bg-clip-text text-transparent border-b-2 border-blue-600"
-                      : theme === "dark"
-                      ? "text-gray-400 hover:text-white"
-                      : "text-gray-500 hover:text-gray-900"
-                  }`}
-                >
-                  Security
-                </button>
+                {(["profile", "security"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab)}
+                    className={`flex-1 pb-3 text-sm font-medium capitalize transition-colors border-b-2 -mb-px ${
+                      activeTab === tab
+                        ? "border-blue-500 text-blue-600 dark:text-blue-400"
+                        : `border-transparent ${
+                            theme === "dark"
+                              ? "text-gray-400 hover:text-gray-200"
+                              : "text-gray-500 hover:text-gray-700"
+                          }`
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
               </div>
 
-              {/* Profile and Security Forms */}
               {activeTab === "profile" ? (
-                <form onSubmit={handleProfileUpdate} className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                        Username
-                      </label>
-                      <div className="relative">
-                        <div
-                          className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${
-                            theme === "dark" ? "text-gray-400" : "text-gray-500"
-                          }`}
-                        >
-                          <HiUser size={20} />
-                        </div>
-                        <input
-                          type="text"
-                          name="username"
-                          value={formData.username}
-                          onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-all duration-300 ${
-                            theme === "dark"
-                              ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                              : "bg-gray-50 border-gray-200 focus:border-blue-500"
-                          }`}
-                        />
+                <form onSubmit={handleProfileUpdate} className="space-y-4">
+                  <div>
+                    <label className={labelClass}>Username</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <HiUser size={16} />
                       </div>
+                      <input
+                        type="text"
+                        name="username"
+                        value={formData.username}
+                        onChange={handleInputChange}
+                        className={inputClass}
+                      />
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium mb-2 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                        Email
-                      </label>
-                      <div className="relative">
-                        <div
-                          className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${
-                            theme === "dark" ? "text-gray-400" : "text-gray-500"
-                          }`}
-                        >
-                          <HiMail size={20} />
-                        </div>
-                        <input
-                          type="email"
-                          name="email"
-                          value={formData.email}
-                          onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-all duration-300 ${
-                            theme === "dark"
-                              ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                              : "bg-gray-50 border-gray-200 focus:border-blue-500"
-                          }`}
-                        />
+                  <div>
+                    <label className={labelClass}>Email</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <HiMail size={16} />
                       </div>
+                      <input
+                        type="email"
+                        name="email"
+                        value={formData.email}
+                        onChange={handleInputChange}
+                        className={inputClass}
+                      />
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium mb-2 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                        Current Password
-                      </label>
-                      <div className="relative">
-                        <div
-                          className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${
-                            theme === "dark" ? "text-gray-400" : "text-gray-500"
-                          }`}
-                        >
-                          <HiKey size={20} />
-                        </div>
-                        <input
-                          type="password"
-                          name="currentPassword"
-                          value={formData.currentPassword}
-                          onChange={handleInputChange}
-                          required
-                          className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-all duration-300 ${
-                            theme === "dark"
-                              ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                              : "bg-gray-50 border-gray-200 focus:border-blue-500"
-                          }`}
-                        />
+                  <div>
+                    <label className={labelClass}>Current Password</label>
+                    <div className="relative">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                        <HiKey size={16} />
                       </div>
+                      <input
+                        type="password"
+                        name="currentPassword"
+                        value={formData.currentPassword}
+                        onChange={handleInputChange}
+                        required
+                        className={inputClass}
+                      />
                     </div>
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium mb-2 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                        Theme
-                      </label>
-                      <button
-                        type="button"
-                        onClick={toggleTheme}
-                        className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-                          theme === "dark"
-                            ? "bg-gray-800 hover:bg-gray-700"
-                            : "bg-gray-100 hover:bg-gray-200"
-                        }`}
-                      >
-                        {theme === "dark" ? (
-                          <>
-                            <HiSun size={20} className="text-amber-400" />
-                            <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-                              Light Mode
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <HiMoon size={20} className="text-indigo-600" />
-                            <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                              Dark Mode
-                            </span>
-                          </>
-                        )}
-                      </button>
-                    </div>
+                  <div>
+                    <label className={labelClass}>Theme</label>
+                    <button
+                      type="button"
+                      onClick={toggleTheme}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                        theme === "dark"
+                          ? "bg-gray-800 text-gray-200 hover:bg-gray-700"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      {theme === "dark" ? (
+                        <>
+                          <HiSun size={16} className="text-amber-400" />
+                          <span>Switch to Light Mode</span>
+                        </>
+                      ) : (
+                        <>
+                          <HiMoon size={16} className="text-gray-600" />
+                          <span>Switch to Dark Mode</span>
+                        </>
+                      )}
+                    </button>
                   </div>
 
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-300 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white ${
-                      isLoading ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                    className="w-full py-2 px-4 rounded-md text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? "Updating..." : "Update Profile"}
                   </button>
                 </form>
               ) : (
-                <form onSubmit={handlePasswordUpdate} className="space-y-6">
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium mb-2 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                        Current Password
-                      </label>
-                      <div className="relative">
-                        <div
-                          className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${
-                            theme === "dark" ? "text-gray-400" : "text-gray-500"
-                          }`}
-                        >
-                          <HiKey size={20} />
+                <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                  {["currentPassword", "newPassword", "confirmPassword"].map(
+                    (field) => (
+                      <div key={field}>
+                        <label className={labelClass}>
+                          {field === "currentPassword"
+                            ? "Current Password"
+                            : field === "newPassword"
+                            ? "New Password"
+                            : "Confirm New Password"}
+                        </label>
+                        <div className="relative">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <HiKey size={16} />
+                          </div>
+                          <input
+                            type="password"
+                            name={field}
+                            value={formData[field as keyof typeof formData] as string}
+                            onChange={handleInputChange}
+                            className={inputClass}
+                          />
                         </div>
-                        <input
-                          type="password"
-                          name="currentPassword"
-                          value={formData.currentPassword}
-                          onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-all duration-300 ${
-                            theme === "dark"
-                              ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                              : "bg-gray-50 border-gray-200 focus:border-blue-500"
-                          }`}
-                        />
                       </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                        New Password
-                      </label>
-                      <div className="relative">
-                        <div
-                          className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${
-                            theme === "dark" ? "text-gray-400" : "text-gray-500"
-                          }`}
-                        >
-                          <HiKey size={20} />
-                        </div>
-                        <input
-                          type="password"
-                          name="newPassword"
-                          value={formData.newPassword}
-                          onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-all duration-300 ${
-                            theme === "dark"
-                              ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                              : "bg-gray-50 border-gray-200 focus:border-blue-500"
-                          }`}
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium mb-2 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                        Confirm New Password
-                      </label>
-                      <div className="relative">
-                        <div
-                          className={`absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none ${
-                            theme === "dark" ? "text-gray-400" : "text-gray-500"
-                          }`}
-                        >
-                          <HiKey size={20} />
-                        </div>
-                        <input
-                          type="password"
-                          name="confirmPassword"
-                          value={formData.confirmPassword}
-                          onChange={handleInputChange}
-                          className={`w-full pl-10 pr-4 py-2 rounded-lg border transition-all duration-300 ${
-                            theme === "dark"
-                              ? "bg-gray-800 border-gray-700 focus:border-blue-500"
-                              : "bg-gray-50 border-gray-200 focus:border-blue-500"
-                          }`}
-                        />
-                      </div>
-                    </div>
-                  </div>
+                    )
+                  )}
 
                   <button
                     type="submit"
                     disabled={isLoading}
-                    className={`w-full py-2 px-4 rounded-lg font-medium transition-all duration-300 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white ${
-                      isLoading ? "opacity-50 cursor-not-allowed" : ""
-                    }`}
+                    className="w-full py-2 px-4 rounded-md text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isLoading ? "Updating..." : "Update Password"}
                   </button>
@@ -487,38 +369,29 @@ const SettingsModal = ({ isOpen, onClose }: SettingsModalProps) => {
               )}
             </>
           ) : (
-            // Only show theme toggle for non-logged in users
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-2 bg-gradient-to-r from-blue-500 to-purple-600 bg-clip-text text-transparent">
-                  Theme
-                </label>
-                <button
-                  type="button"
-                  onClick={toggleTheme}
-                  className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-all duration-300 ${
-                    theme === "dark"
-                      ? "bg-gray-800 hover:bg-gray-700"
-                      : "bg-gray-100 hover:bg-gray-200"
-                  }`}
-                >
-                  {theme === "dark" ? (
-                    <>
-                      <HiSun size={20} className="text-amber-400" />
-                      <span className="bg-gradient-to-r from-amber-400 to-orange-500 bg-clip-text text-transparent">
-                        Light Mode
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <HiMoon size={20} className="text-indigo-600" />
-                      <span className="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">
-                        Dark Mode
-                      </span>
-                    </>
-                  )}
-                </button>
-              </div>
+            <div>
+              <label className={labelClass}>Theme</label>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className={`flex items-center gap-2 px-3 py-2 rounded-md text-sm transition-colors ${
+                  theme === "dark"
+                    ? "bg-gray-800 text-gray-200 hover:bg-gray-700"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {theme === "dark" ? (
+                  <>
+                    <HiSun size={16} className="text-amber-400" />
+                    <span>Switch to Light Mode</span>
+                  </>
+                ) : (
+                  <>
+                    <HiMoon size={16} className="text-gray-600" />
+                    <span>Switch to Dark Mode</span>
+                  </>
+                )}
+              </button>
             </div>
           )}
         </div>
