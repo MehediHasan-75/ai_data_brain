@@ -30,7 +30,7 @@ const Page = () => {
   return (
     <div className="flex overflow-hidden transition-all duration-500 ease-in-out">
       <Navbar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
-      <ToggleChat onToggle={() => setChatOpen(!chatOpen)} />
+      {!chatOpen && <ToggleChat onToggle={() => setChatOpen(true)} />}
       <SideBar isOpen={sidebarOpen} setIsOpen={setSidebarOpen} />
       <div className="flex-1 overflow-x-auto">
         <MainContent showChat={chatOpen} />
