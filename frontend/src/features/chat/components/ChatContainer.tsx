@@ -15,7 +15,7 @@ export default function ChatContainer() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { initialMessages, loading: sessionLoading, saveMessage } = useChatSession();
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } = useChat({
+  const { messages, input, handleInputChange, handleSubmit, isLoading, error } = useChat({
     api: "/api/chat/stream",
     body: { tableId: selectedTableId },
     initialMessages,
@@ -92,6 +92,13 @@ export default function ChatContainer() {
                 <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "150ms" }} />
                 <span className="w-2 h-2 rounded-full bg-gray-400 animate-bounce" style={{ animationDelay: "300ms" }} />
               </div>
+            </div>
+          </div>
+        )}
+        {error && (
+          <div className="flex justify-start mb-3">
+            <div className="bg-red-100 dark:bg-red-900/40 border border-red-300 dark:border-red-700 text-red-700 dark:text-red-300 rounded-2xl rounded-tl-sm px-4 py-2 text-sm max-w-[85%]">
+              {error.message || "Something went wrong. Please try again."}
             </div>
           </div>
         )}
